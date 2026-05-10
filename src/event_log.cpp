@@ -13,15 +13,25 @@
 #include <map>
 #include <stack>
 
+// TODO: May need to refactor event log so that I can insert events during reconstruction and not worry about sequences after event needing to be adjusted
 namespace {
     std::vector<chronoporia::Event> event_log;
-    std::map<DWORD, std::stack<chronoporia::Event>> thread_events;
+    std::map<DWORD, std::stack<chronoporia::Event>> pending_thread_events;
+
+    void AddEvent(chronoporia::Event new_event) {
+        auto itr = std::upper_bound(event_log.begin(), event_log.end(), new_event->global_seq,             
+            [](uint64_t seq, const chronoporia::Event& logged_event) {
+                return seq < logged_event->global_seq;
+            }
+        );
+        event_log.insert(itr, std::move(new_event));
+    }
 }
 
 namespace chronoporia {
 
     void LogEvent(Event event) {
-        event_log.push_back(std::move(event));
+        AddEvent(std::move(event));
     }
 
     void OnBreakpointEnter(const uintptr_t address, const DWORD thread_id) {
@@ -34,20 +44,19 @@ namespace chronoporia {
         auto event = CreateEventFromBpAddress(address, thread_id, ctx);
         if (event == nullptr) return;
 
-        thread_events[thread_id].push(std::move(event));
+        pending_thread_events[thread_id].push(std::move(event));
     }
 
     // TODO: write a verifier (or assert?) that checks if the address was a return address to the initial breakpoint for the thread
     //  This is in case events for some reason come out of order (or maybe async?)
-    // TODO: Make the event log use an insertion sort (?) since events can come out of order due to the stack
     void OnBreakpointReturn(const uintptr_t address, const DWORD thread_id, const CONTEXT& ctx) {
-        auto& thread_event_stack = thread_events[thread_id];
+        auto& thread_event_stack = pending_thread_events[thread_id];
         if (thread_event_stack.empty()) return;
 
         auto completed_event = std::move(thread_event_stack.top());
         completed_event->FinishEvent(ctx);
 
-        event_log.push_back(std::move(completed_event));
+        AddEvent(std::move(completed_event));
         thread_event_stack.pop();
 
         RemoveBreakpoint(address, thread_id);

@@ -9,9 +9,16 @@ namespace chronoporia {
     //  of the non-deterministic events we captured previously.  The only new events that are created should be line snapshots
     class ReconstructionPhase: public BaseExecutionPhase {
     public:
+        ReconstructionPhase(TransitionToReconstruction&& t) 
+            : process_suspended {t.process_suspended}
+        {}
+
+
         void Enter() override;
         Transition Run() override;
         void Exit() override;
+    private:
+        bool process_suspended;
     };
 
 }

@@ -175,6 +175,7 @@ namespace chronoporia {
             LogEvent(std::move(snapshot));
 
             // make trampoline after we save the memory other I'm saving the breakpoints in the data
+            // TODO: refactor this
             CreateTrampolineRegion();
             CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtCreateThreadEx));
             CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtTerminateThread));
@@ -198,10 +199,4 @@ namespace chronoporia {
         }
         return DBG_CONTINUE;
     }
-
-    void RecordingPhase::SetupNonDetCapture() {
-        CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtCreateThreadEx));
-        FinalizeTrampolineRegion();
-    }
-
 }
