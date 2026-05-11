@@ -80,9 +80,7 @@ namespace chronoporia {
     }
 
 
-    void ReplayFunctionEvent() {
-
-    }
+    void ReplayFunctionEvent() {}
 
     void StubFunctionEvent() {}
 

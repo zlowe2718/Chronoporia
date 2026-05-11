@@ -60,10 +60,6 @@ LONG QueryInformationProcess(const PROCESSINFOCLASS process_info_class, const PR
     return error;
 }
 
-LONG UnmapViewOfSection() {
-    return 0;
-}
-
 uintptr_t GetChildEntryAddress() {
     // 3. Get PEB address from ProcessBasicInformation
     PROCESS_BASIC_INFORMATION pbi;

@@ -66,11 +66,6 @@ LONG ResumeProcess();
 // Not currently used
 LONG QueryInformationProcess(const PROCESSINFOCLASS process_info_class, const PROCESS_BASIC_INFORMATION& pbi);
 
-// Forcibly unmap a mapped view
-// Returns the NtStatus value (not the windows error code) 
-// TODO: Implement
-LONG UnmapViewOfSection();
-
 uintptr_t GetChildEntryAddress();
 
 };
