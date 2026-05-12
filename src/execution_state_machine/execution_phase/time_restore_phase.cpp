@@ -28,7 +28,6 @@ using namespace std::chrono_literals;
 // when the thread is finished without worrying about timeouts
 
 namespace chronoporia {
-    // TODO: reenable shell code execution.  Order should be dll -> threads -> memory
     // During the dll and thread fixing we'll need to be running WaitForDebugEvent so the process
     // Can proceed with unloading/loading dlls and destroying/creating threads
     void TimeRestorePhase::Enter() {
@@ -63,7 +62,6 @@ namespace chronoporia {
         return TransitionToPlayback {};
     } 
 
-    // TODO: When loading dlls (calling RestoreDLLsAtSequence) I'll need to eventually need to move that under the async call like threads and probably combine these functions
     bool TimeRestorePhase::RunDllRestore() {
         DEBUG_EVENT de;
         DWORD last_error;
@@ -94,7 +92,6 @@ namespace chronoporia {
                                 de.dwThreadId,
                                 continue_status
                             );
-                            // TODO: do an explicit check for the correct shellcode breakpoint
                             return true;
                         }            
                 }

@@ -6,7 +6,6 @@ namespace chronoporia {
 
 using CacheLine = std::array<std::byte, 64>;
 using PageMemory = std::array<std::byte, 4096>;
-// TODO: Get page size from GetSystemInfo
 
 // Typically a FatNode implementation of a partially persistent array is a vector of structs of changed value and version
 // Since this is for memory I'm changing the implementation a little to be more cache aligned
@@ -31,7 +30,6 @@ public:
 
     PartiallyPersistentCacheArray() {};
 
-    // TODO: can I change this to support move semantics instead of memcpy
     PartiallyPersistentCacheArray(uint64_t global_sequence, const std::array<CacheLine, CacheLineAmount>& page_memory) {
         for (uint32_t cache_line_idx = 0; cache_line_idx < CacheLineAmount; cache_line_idx++) {
             const auto& current_cache_line = page_memory[cache_line_idx];
@@ -45,8 +43,6 @@ public:
         created_version = global_sequence;
     };
 
-    // TODO: I don't think I need previous_page_memory, I can just memcmp with fat_nodes[cache_line_idx].back()
-    //  i.e. the most recent fat node change for the cache line
     void update(
         uint64_t global_sequence, 
         const std::array<CacheLine, CacheLineAmount>& page_memory,
@@ -67,7 +63,6 @@ public:
 
     };
 
-    // TODO: caller should ensure that target sequence is never less than the created version
     PageMemory get(uint64_t target_sequence) const {
         PageMemory rebuilt_page {};
 
@@ -104,7 +99,6 @@ public:
 
     PartiallyPersistentArray() {};
 
-    // TODO: can I change this to support move semantics instead of memcpy
     PartiallyPersistentArray(uint64_t global_sequence, const Data& data) {
         FatNode fat_node {global_sequence, data};
         fat_nodes.push_back(std::move(fat_node));
@@ -119,7 +113,6 @@ public:
         fat_nodes.push_back(std::move(fat_node));
     };
 
-    // TODO: caller should ensure that target sequence is never less than the created version
     Data get(uint64_t target_sequence) const {
         // binary search to find the first entry with version > target_sequence, then step back one
         auto idx = std::upper_bound(fat_nodes.begin(), fat_nodes.end(), target_sequence,

@@ -10,8 +10,6 @@
 namespace chronoporia {
 
     struct TransitionVisitor {
-        // TODO: list global stores/trackers here
-
         std::unique_ptr<BaseExecutionPhase> operator()(TransitionToRecording&& t) {
             return std::make_unique<RecordingPhase>(std::move(t));
         }

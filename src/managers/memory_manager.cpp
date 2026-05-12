@@ -40,16 +40,13 @@ namespace chronoporia {
 void RestoreMemoryAtSequence(uint64_t target_sequence) {
     // First Free all private allocations
     MEMORY_BASIC_INFORMATION m;
-    for (char *address = NULL; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
+    for (char *address = nullptr; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
             address = static_cast<char *>(m.BaseAddress) + m.RegionSize)
     {
         if (m.State == MEM_FREE || m.Type == MEM_IMAGE || m.Type == MEM_MAPPED) continue;
         // Skip KUSER_SHARED_DATA
         if (address >= globals::kUserSharedDataBaseAddress && address <= globals::kUserSharedDataEndAddress) continue;
-        // TODO: Is this needed? If we free the allocation base this should never trigger? Only act at the allocation base to avoid double-free within the same region
         if (m.BaseAddress != m.AllocationBase) continue;
-        // TODO: no need to free TEB.  Do I need to track this in ThreadInfo
-        // if (restore_snapshot.thread_contexts.count(m.BaseAddress)) continue;
         FreeMemory(m.AllocationBase);
     }
 
@@ -157,7 +154,7 @@ void RestoreMemoryAtSequence(uint64_t target_sequence) {
 void CoarseSnapshot(uint64_t global_sequence) {
     MEMORY_BASIC_INFORMATION m {};
 
-    for (void *address = NULL; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
+    for (void *address = nullptr; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
         address = static_cast<char *>(m.BaseAddress) + m.RegionSize)
     {
         // No need to track Free blocks

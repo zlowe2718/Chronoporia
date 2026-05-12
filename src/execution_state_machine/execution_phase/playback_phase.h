@@ -1,13 +1,6 @@
 #pragma once
 #include "base_execution.h"
 
-// TODO: Maybe some kind of graphic eventually like
-//                  Event 1          Event 2          Event 3          Event 4
-//  thread 123      LineSnap ------> LineSnap2           -                -
-//  thread 12          -                -     |---       -                -
-//  thread 234         -                -         |-->lineSnap3           -
-//  thread 1234        -                -                -             LineSnap4
-
 namespace chronoporia {
 
     // This mode is after the reconstruction phase where we now have all the data necessary to jump around in memory from line to line

@@ -70,7 +70,7 @@ namespace chronoporia {
             );
             if (dll_itr != dlls_to_free.end()) {
                 dlls_to_free.erase(dll_itr);
-            } // else load it?
+            } // TODO: else load it?
         }
 
         return dlls_to_free;

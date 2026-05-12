@@ -22,7 +22,6 @@ namespace chronoporia {
         //     IN PULONG dll_characteristics
         //     IN PCUNICODE_STRING dll_name
         //     OUT PVOID *dll_handle;
-        // TODO: readprocessmemory may not be needed if I track memory addresses deterministically
         SharedLibraryLoadEvent(DWORD thread_id, const CONTEXT& thread_ctx)
             : BaseEvent(thread_id)
             {
