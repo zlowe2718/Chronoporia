@@ -22,14 +22,14 @@ int main(int argc, char *argv[]) {
 		ws += " ";
 	}
     CreateProcessA(
-		NULL,
+		nullptr,
 		&ws[0],
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
 		FALSE,
 		DEBUG_ONLY_THIS_PROCESS,
-		NULL,
-		NULL,
+		nullptr,
+		nullptr,
 		&si,
 		&pi
 	);

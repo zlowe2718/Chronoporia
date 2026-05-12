@@ -13,13 +13,4 @@ namespace chronoporia {
         }
         return snapshot;
     }
-
-    // TODO: Need to rethink how to restore dlls since I'll have to tell the thread to run my shell code
-    //  Then listen for the breakpoint that says dlls were unloaded and then reset the threads and memory
-    //  This will probably need to be split into two functions
-    void CoarseSnapshotEvent::apply() {
-        RestoreDLLsAtSequence(global_seq);
-        RestoreThreadsAtSequence(global_seq);
-        RestoreMemoryAtSequence(global_seq);
-    }
 }

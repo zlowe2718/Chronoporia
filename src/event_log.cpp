@@ -37,9 +37,6 @@ namespace chronoporia {
         thread_events[thread_id].push(std::move(event));
     }
 
-    // TODO: write a verifier (or assert?) that checks if the address was a return address to the initial breakpoint for the thread
-    //  This is in case events for some reason come out of order (or maybe async?)
-    // TODO: Make the event log use an insertion sort (?) since events can come out of order due to the stack
     void OnBreakpointReturn(const uintptr_t address, const DWORD thread_id, const CONTEXT& ctx) {
         auto& thread_event_stack = thread_events[thread_id];
         if (thread_event_stack.empty()) return;
@@ -53,7 +50,6 @@ namespace chronoporia {
         RemoveBreakpoint(address, thread_id);
     }
 
-    // TODO: change this to a dispatch table later
     Event CreateEventFromBpAddress(const uintptr_t address, const DWORD thread_id, const CONTEXT& ctx) {
         void *bp_address = reinterpret_cast<void *>(address);
         if (bp_address == NtCreateThreadEx) {

@@ -21,10 +21,6 @@ void CreateTrampolineRegion(uint64_t region_size) {
     trampoline_size = region_size;
 }
 
-// We need to keep track of the final page adress so we don't copy over that or arm in our snapshot and page guard calls 
-// TODO: later we can get fancy if we want to have regions of 8 bytes and regions of 16 bytes using allocators to manage where they should fit to pack them tightly.
-// Could also group related calls together (calls called frequently or frequently in respect to another) and pack those into a 64 byte cache line
-
 uintptr_t CreateTrampoline(const uintptr_t address) {
     InstructionRegion buffer;
     buffer.fill(0x00);

@@ -33,9 +33,6 @@ void TrackShellCodeBreakpoint(uintptr_t address) {
     address_to_bp[address] = Breakpoint{ 0, BreakpointType::ShellCode, 0, address, {} };
 }
 
-// TODO: handle the case of multiple threads holding a return breakpoint.
-// I'll need to suspend all threads and have the executing thread single step before I can resume
-// execution again
 bool RemoveBreakpoint(uintptr_t address, const DWORD thread_id) {
     if (permanent_bp_to_trampoline.contains(address)) return false;
     if (address_to_bp.contains(address)) {

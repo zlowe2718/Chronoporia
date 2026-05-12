@@ -3,8 +3,6 @@
 #include <Windows.h>
 #include <vector>
 
-// TODO: Split out thread helper functions and handle map in another file?
-
 namespace chronoporia {
 
     struct ThreadInfo {

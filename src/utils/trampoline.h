@@ -10,7 +10,6 @@ namespace chronoporia {
 
 // A 32 byte aligned region for instructions
 // max instruction size is 15 bytes + 14 bytes for JMP gives 29
-// TODO: may need to consider rip relative instructions later?
 using InstructionRegion = std::array<uint8_t, 32>;
 
 // 4096 bytes gives us 128 32 byte regions which should be plenty for now

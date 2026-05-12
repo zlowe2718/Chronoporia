@@ -16,14 +16,13 @@ namespace chronoporia {
     uintptr_t WriteShellCodeBufferToProcess() {
         uint64_t total_code_size = shellcode_buffer.size();
         void *remote_code_address = VirtualAllocEx(
-            globals::process_handle, NULL, total_code_size,
+            globals::process_handle, nullptr, total_code_size,
             MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE
         );
         WriteProcessMemory(globals::process_handle, remote_code_address, shellcode_buffer.data(), total_code_size, nullptr);
         FlushInstructionCache(globals::process_handle, remote_code_address, total_code_size);
         shellcode_buffer.clear();
-        // TODO: change this to be more dynamic in case we have different shellcodes to run
-        return reinterpret_cast<uintptr_t>(remote_code_address); //+ sizeof(ShellcodeParams);
+        return reinterpret_cast<uintptr_t>(remote_code_address);
     }
 
     void FreeShellCodeAtAddress(uintptr_t shell_address) {

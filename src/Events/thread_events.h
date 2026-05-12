@@ -4,8 +4,6 @@
 #include "nt_undocumented.h"
 #include "base_event.h"
 
-// TODO: May need to handle NtThreadCreate later for earlier windows versions
-
 namespace chronoporia {
     struct ThreadCreateStackArgs {
         IN PUSER_THREAD_START_ROUTINE start_routine;
@@ -27,7 +25,6 @@ namespace chronoporia {
         ThreadCreateStackArgs stack_args;
         NTSTATUS return_status;
 
-        // TODO: read process memory of the in pointers like object_attributes, start_routine, argument...
         ThreadCreateEvent(DWORD thread_id, const CONTEXT& thread_ctx)
             : BaseEvent(thread_id)
             {

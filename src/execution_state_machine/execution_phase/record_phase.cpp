@@ -28,7 +28,6 @@ namespace chronoporia {
         return DebugLoop();
     }
 
-    // TODO: this is where we clean up breakpoints and other related code?
     void RecordingPhase::Exit() {
         RemoveAllPermanentBreakpoints();
         DestroyTrampolineRegion();
@@ -87,7 +86,6 @@ namespace chronoporia {
             } else {
                 last_error = GetLastError();
 
-                // TODO: may need to later account for extra events coming in after process was suspended
                 // timeout occurred, take a snapshot.  Threads are NOT suspended on a timeout
                 if (last_error == ERROR_SEM_TIMEOUT) {
                     SuspendProcess();
@@ -96,7 +94,6 @@ namespace chronoporia {
                     // UntrackAllDirtyPages();
                     // RestoreMemoryAtAllBreakpoints();
                     uint64_t target_sequence = GetMostRecentCoarseEvent();
-                    // TODO: fix this later, right now I'm testing phase transitions
                     return TransitionToTimeRestore {true, target_sequence };
                     // SetBreakpointAtAddress(child_entry_address, BreakpointCaller::EntryBreakpoint);
                     // ResumeProcess();
@@ -121,41 +118,6 @@ namespace chronoporia {
             case STATUS_BREAKPOINT: {
                 return HandleBreakpoint(debug_event);
             }
-
-            // case STATUS_GUARD_PAGE_VIOLATION: {
-            //     // TODO: Do I need to worry about stack overflows messing with this?
-            //     ULONG_PTR fault_address = er->ExceptionInformation[1];
-            //     ULONG_PTR fault_page_start_addr = fault_address & ~0xFFFULL; //reset the page nibble
-
-            //     if (!WasPageArmed(reinterpret_cast<void *>(fault_page_start_addr))) {
-            //         return DBG_EXCEPTION_NOT_HANDLED;
-            //     }
-
-            //     TrackDirtyPage(reinterpret_cast<void *>(fault_page_start_addr));
-            //     return DBG_CONTINUE;
-            // }
-
-            // We haven't handled this case yet log and print what happened
-            // default: {
-            //     CONTEXT ctx = GetThreadContextFromId(debug_event->dwThreadId);
-            //     MEMORY_BASIC_INFORMATION m_addr;
-            //     MEMORY_BASIC_INFORMATION m_rip;
-            //     MEMORY_BASIC_INFORMATION m_rsp;
-            //     VirtualQueryEx(globals::process_handle, (void*)er->ExceptionAddress, &m_addr, sizeof(m_addr));
-            //     VirtualQueryEx(globals::process_handle, (void*)ctx.Rip, &m_rip, sizeof(m_rip));
-            //     VirtualQueryEx(globals::process_handle, (void*)ctx.Rsp, &m_rsp, sizeof(m_rsp));
-            //     printf("(Thread: %ld) Unhandled Debug Exception: \n"
-            //            "    Exception Code: %ld\n"
-            //            "    Exception Address: %p\n"
-            //            "    Thread Rip: %p\n"
-            //            "    Thread Rsp: %p\n"
-            //         , debug_event->dwThreadId
-            //         , er->ExceptionCode
-            //         , ctx.Rip
-            //         , ctx.Rsp
-            //     );
-            //     return DBG_EXCEPTION_NOT_HANDLED;
-            // }
         }
 
         return DBG_EXCEPTION_NOT_HANDLED;

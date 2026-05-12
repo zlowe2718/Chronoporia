@@ -106,7 +106,6 @@ namespace chronoporia {
 
     void TerminateThreadIds(const std::vector<ThreadInfo>& thread_infos) {
         for (const ThreadInfo& thread_info: thread_infos) {
-            // TODO: Do I want ExitThread instead?
             DWORD thread_id = thread_info.thread_id;
             HANDLE thread = GetThreadHandle(thread_id);
 
