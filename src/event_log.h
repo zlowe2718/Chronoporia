@@ -1,5 +1,6 @@
 #pragma once
 #include "base_event.h"
+#include <cstdint>
 #include <memory>
 
 // TODO: I need a thread map to event stack then on stack pop I add it to the event log?
@@ -17,8 +18,10 @@ namespace chronoporia {
     void OnBreakpointReturn(const uintptr_t address, const DWORD thread_id, const CONTEXT& ctx);
 
     Event CreateEventFromBpAddress(const uintptr_t address, const DWORD thread_id, const CONTEXT& ctx);
-    
-    uint64_t GetMostRecentCoarseEvent();
+
+    // Take in an address and replay or stub the next event in the log.  Look through the log in case replayed events
+    //  are out of order from the event log
+    void ReplayEvent(const uintptr_t address);
 
     // TODO: Implement.  This will be called during a non-deterministic event like NtAllocateVirtualMemory.  Since we'd need to replay
     // That function anyways, we'll pass in the parameters needed and let the OS handle it.

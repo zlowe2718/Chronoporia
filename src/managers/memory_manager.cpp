@@ -154,7 +154,7 @@ void RestoreMemoryAtSequence(uint64_t target_sequence) {
     }
 };
 
-void CoarseSnapshot(uint64_t global_sequence) {
+void SnapshotMemory(uint64_t global_sequence) {
     MEMORY_BASIC_INFORMATION m {};
 
     for (void *address = NULL; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);

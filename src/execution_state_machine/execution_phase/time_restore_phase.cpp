@@ -1,5 +1,6 @@
 #include "time_restore_phase.h"
 #include "error_transition.h"
+#include "reconstruction_transition.h"
 #include "shellcode.h"
 #include "breakpoint_manager.h"
 #include "module_manager.h"
@@ -9,11 +10,11 @@
 #include "thread_utils.h"
 #include "nt_wrappers.h"
 #include "transition.h"
-#include <cstdint>
 #include <errhandlingapi.h>
 #include <future>
 #include <minwinbase.h>
 #include <winbase.h>
+#include <chrono>
 
 using namespace std::chrono_literals;
 
@@ -60,7 +61,7 @@ namespace chronoporia {
         if (!RunThreadRestore()) {
             return TransitionToError {GetLastError()};
         }
-        return TransitionToPlayback {};
+        return TransitionToReconstruction {};
     } 
 
     // TODO: When loading dlls (calling RestoreDLLsAtSequence) I'll need to eventually need to move that under the async call like threads and probably combine these functions
@@ -164,7 +165,6 @@ namespace chronoporia {
 
     void TimeRestorePhase::Exit() {
         RestoreMemoryAtSequence(target_sequence);
-        ResumeProcess();
         return;
     }
 }

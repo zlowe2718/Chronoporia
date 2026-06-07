@@ -18,6 +18,9 @@ namespace chronoporia {
         Transition Run() override;
         void Exit() override;
     private:
+        DWORD HandleDebugException(const DEBUG_EVENT* debug_event);
+        DWORD HandleBreakpoint(const DEBUG_EVENT *debug_event);
+
         bool process_suspended;
     };
 

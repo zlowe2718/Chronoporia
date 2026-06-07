@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <stdint.h>
@@ -19,11 +20,13 @@ namespace chronoporia {
         uint64_t global_seq;
         uint64_t thread_seq;
         DWORD thread_id;
+        uintptr_t event_rip;
 
-        ~BaseEvent() = default;
+        virtual ~BaseEvent() = default;
 
-        BaseEvent(DWORD thread_id)
-            : thread_id{thread_id}
+        BaseEvent(DWORD thread_id, uintptr_t event_rip)
+            : thread_id {thread_id}
+            , event_rip {event_rip}
             {
                 global_seq = globals::global_sequence;
                 thread_seq = globals::thread_id_to_sequence[thread_id];
@@ -33,7 +36,6 @@ namespace chronoporia {
             }
 
         virtual void FinishEvent(const CONTEXT& thread_ctx) = 0;
-        virtual void apply() {};
 
         template <typename StackArgType>
         void ReadStackArgs(const uintptr_t stack_address, StackArgType& stack_args) {

@@ -65,7 +65,7 @@ struct MemoryRegionHistory {
     std::unordered_map<uintptr_t, BlockHistory<PageSize>> block_history;
 };
 
-void CoarseSnapshot(uint64_t global_sequence);
+void SnapshotMemory(uint64_t global_sequence);
 void RestoreMemoryAtSequence(uint64_t global_sequence);
 
 template <bool MemoryDebug>

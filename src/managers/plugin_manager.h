@@ -1,9 +1,12 @@
 #pragma once
-#include <vector>
+#include <Windows.h>
 #include <string>
 
 
 namespace chronoporia {
+    typedef void (* InitializePlugin)(DWORD pid, const std::wstring &dll_name, const std::wstring &dll_path);
+    typedef void (* UninitializePlugin)();
+
 
     struct PluginBreakpoint {
         uintptr_t code_address;
@@ -11,8 +14,7 @@ namespace chronoporia {
     };
 
     // Initialize plugins
-    void InitializePlugins();
-    std::vector<std::string> GetPluginsLoaded();
+    void LoadAndInitializePlugins();
 
     // Sets breakpoints at all lines for the selected plugin
     void SetAllBreakpointForPlugin(std::string plugin_language);

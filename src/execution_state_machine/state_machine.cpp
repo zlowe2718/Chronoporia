@@ -7,7 +7,6 @@
 #include "time_restore_phase.h"
 #include "playback_phase.h"
 #include "globals.h"
-#include "transitions/reconstruction_transition.h"
 #include <memory>
 
 namespace chronoporia {

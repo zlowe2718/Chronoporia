@@ -1,7 +1,7 @@
 [{
     "directory": "C:\\Users\\zlowe\\Desktop\\_dev\\chronoporia",
     "arguments": [
-        "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\bin\\Hostx64\\x64\\cl.exe",
+        "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
         "/JMC",
         "/permissive-",
         "/ifcOutput",
@@ -23,7 +23,7 @@
         "/Gm-", 
         "/Od", 
         "/sdl", 
-        "/Fd'C:\\Users\\zlowe\\Desktop\\_dev\\chronoporia\\msvc\\out\\x64\\Debug\\vc143.pdb'", 
+        "/Fd'C:\\Users\\zlowe\\Desktop\\_dev\\chronoporia\\msvc\\out\\x64\\Debug\\vc145.pdb'", 
         "/Zc:inline", 
         "/fp:precise",
         "/D", 
@@ -38,7 +38,7 @@
         "/RTC1", 
         "/Gd", 
         "/MDd", 
-        "/std:c++20", 
+        "/std:c++23preview", 
         "/FC",
         "/Fa'C:\\Users\\zlowe\\Desktop\\_dev\\chronoporia\\msvc\\out\\x64\\Debug\\", 
         "/EHsc", 

@@ -3,18 +3,18 @@
 #include "thread_utils.h"
 #include "trampoline.h"
 #include "breakpoint_manager.h"
+#include "thread_manager.h"
 #include "globals.h"
 #include "event_log.h"
-#include "snapshot_events.h"
 #include "module_manager.h"
 #include "module_utils.h"
+#include "snapshot_log.h"
 #include <chrono>
 #include <minwinbase.h>
 
 
 namespace chronoporia {
 
-    // On Recording start create the trampoline of non-det functions
     void RecordingPhase::Enter() {
         child_entry_address = GetChildEntryAddress();
 
@@ -28,7 +28,6 @@ namespace chronoporia {
         return DebugLoop();
     }
 
-    // TODO: this is where we clean up breakpoints and other related code?
     void RecordingPhase::Exit() {
         RemoveAllPermanentBreakpoints();
         DestroyTrampolineRegion();
@@ -91,17 +90,8 @@ namespace chronoporia {
                 // timeout occurred, take a snapshot.  Threads are NOT suspended on a timeout
                 if (last_error == ERROR_SEM_TIMEOUT) {
                     SuspendProcess();
-                    // std::vector<DirtyPage> dirty_pages = GetDirtyPages();
-                    // TakeCoarseSnapshot(&dirty_pages);
-                    // UntrackAllDirtyPages();
-                    // RestoreMemoryAtAllBreakpoints();
-                    uint64_t target_sequence = GetMostRecentCoarseEvent();
-                    // TODO: fix this later, right now I'm testing phase transitions
+                    uint64_t target_sequence = NearestSnapshotGlobalSeq();
                     return TransitionToTimeRestore {true, target_sequence };
-                    // SetBreakpointAtAddress(child_entry_address, BreakpointCaller::EntryBreakpoint);
-                    // ResumeProcess();
-                    // wait_timeout = globals::snapshot_interval * 1000;
-                    // current_handling_bp_address = nullptr;
                 } else {
                     printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
                     globals::running = false;
@@ -170,9 +160,8 @@ namespace chronoporia {
         CONTEXT ctx = RollBackInstructionPointRegister(thread_id);
         if (rip_address == child_entry_address) {
             RemoveBreakpoint(child_entry_address, globals::main_thread_id);
-
-            auto snapshot = CreateCoarseSnapshotEvent(thread_id, false);
-            LogEvent(std::move(snapshot));
+            TrackAllProgramThreads(globals::global_sequence);
+            SnapshotProcess();
 
             // make trampoline after we save the memory other I'm saving the breakpoints in the data
             // TODO: refactor this

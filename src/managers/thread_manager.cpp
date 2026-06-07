@@ -3,13 +3,19 @@
 #include "globals.h"
 #include "partially_persistent_arrays.h"
 #include <TlHelp32.h>
+#include <cstdint>
+#include <set>
 #include <unordered_map>
+#include <vector>
 
 namespace {
+    // Thread id to thread creation/snapshot/deletion history
     std::unordered_map<
         DWORD, 
         chronoporia::PartiallyPersistentArray<chronoporia::ThreadInfo>
     > process_thread_history;
+
+    std::set<DWORD> current_thread_ids;
 
     CONTEXT GetThreadContext(const HANDLE thread_handle) {
         CONTEXT ctx;
@@ -24,8 +30,10 @@ namespace chronoporia {
     void TrackThread(const DWORD thread_id, const uint64_t global_seq) {
         HANDLE thread = GetThreadHandle(thread_id);
         CONTEXT ctx = GetThreadContext(thread);
-        ThreadInfo thread_info {thread_id, ctx, true};
-        
+        ThreadInfo thread_info {0, thread_id, ctx, true};
+
+        current_thread_ids.insert(thread_id);
+
         if (process_thread_history.contains(thread_id)) {
             process_thread_history[thread_id].update(global_seq, std::move(thread_info));
         } else {
@@ -34,11 +42,13 @@ namespace chronoporia {
     }
 
     void UntrackThread(const DWORD thread_id, const uint64_t global_seq) {
+        current_thread_ids.erase(thread_id);
+
         if (process_thread_history.contains(thread_id)) {
             HANDLE thread = GetThreadHandle(thread_id);
             CloseHandleForThread(thread_id, thread);
 
-            ThreadInfo thread_info {thread_id, CONTEXT{}, false};
+            ThreadInfo thread_info {0, thread_id, CONTEXT{}, false};
             process_thread_history[thread_id].update(global_seq, std::move(thread_info));
         } else {
             printf("Untracking thread %lu before tracking", thread_id);
@@ -114,5 +124,16 @@ namespace chronoporia {
             CloseHandleForThread(thread_id, thread);
         }
     }
+
+    void SnapshotThreads(const uint64_t global_seq, const uint64_t snapshot_seq) {
+        for (const DWORD thread_id : current_thread_ids) {
+            HANDLE thread = GetThreadHandle(thread_id);
+            CONTEXT ctx = GetThreadContext(thread);
+            ThreadInfo thread_info {snapshot_seq, thread_id, ctx, true};
+            
+            process_thread_history[thread_id].update(global_seq, std::move(thread_info));
+        }
+    }
+
 }
 

@@ -75,6 +75,12 @@
     <ClCompile Include="..\src\windows\nt_undocumented.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\execution_state_machine\execution_phase\reconstruction_phase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\managers\plugin_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\event_log.h">
@@ -168,6 +174,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\utils\module_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\managers\plugin_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

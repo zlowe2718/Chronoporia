@@ -23,8 +23,8 @@ namespace chronoporia {
         //     IN PCUNICODE_STRING dll_name
         //     OUT PVOID *dll_handle;
         // TODO: readprocessmemory may not be needed if I track memory addresses deterministically
-        SharedLibraryLoadEvent(DWORD thread_id, const CONTEXT& thread_ctx)
-            : BaseEvent(thread_id)
+        SharedLibraryLoadEvent(DWORD thread_id, uintptr_t event_rip, const CONTEXT& thread_ctx)
+            : BaseEvent(thread_id, event_rip)
             {
                 dll_path.resize(260);
                 ReadProcessMemory(globals::process_handle, reinterpret_cast<PCWSTR>(thread_ctx.Rcx), dll_path.data(), 260, nullptr);
@@ -50,8 +50,8 @@ namespace chronoporia {
 
         // LdrLoadLibrary
         //     IN PVOID dll_handle
-        SharedLibraryUnloadEvent(DWORD thread_id, const CONTEXT& thread_ctx)
-            : BaseEvent(thread_id)
+        SharedLibraryUnloadEvent(DWORD thread_id, uintptr_t event_rip, const CONTEXT& thread_ctx)
+            : BaseEvent(thread_id, event_rip)
             {
                 dll_handle = reinterpret_cast<HMODULE>(thread_ctx.Rcx);
             }

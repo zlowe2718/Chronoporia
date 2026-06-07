@@ -40,6 +40,7 @@
     <ClCompile Include="..\src\Events\thread_events.cpp" />
     <ClCompile Include="..\src\event_log.cpp" />
     <ClCompile Include="..\src\execution_state_machine\execution_phase\process_start_phase.cpp" />
+    <ClCompile Include="..\src\execution_state_machine\execution_phase\reconstruction_phase.cpp" />
     <ClCompile Include="..\src\execution_state_machine\execution_phase\record_phase.cpp" />
     <ClCompile Include="..\src\execution_state_machine\execution_phase\time_restore_phase.cpp" />
     <ClCompile Include="..\src\execution_state_machine\state_machine.cpp" />
@@ -48,6 +49,7 @@
     <ClCompile Include="..\src\managers\breakpoint_manager.cpp" />
     <ClCompile Include="..\src\managers\memory_manager.cpp" />
     <ClCompile Include="..\src\managers\module_manager.cpp" />
+    <ClCompile Include="..\src\managers\plugin_manager.cpp" />
     <ClCompile Include="..\src\managers\thread_manager.cpp" />
     <ClCompile Include="..\src\utils\module_utils.cpp" />
     <ClCompile Include="..\src\utils\shellcode.cpp" />
@@ -80,6 +82,7 @@
     <ClInclude Include="..\src\managers\breakpoint_manager.h" />
     <ClInclude Include="..\src\managers\memory_manager.h" />
     <ClInclude Include="..\src\managers\module_manager.h" />
+    <ClInclude Include="..\src\managers\plugin_manager.h" />
     <ClInclude Include="..\src\managers\thread_manager.h" />
     <ClInclude Include="..\src\trampoline.h" />
     <ClInclude Include="..\src\utils\module_utils.h" />
@@ -101,52 +104,52 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Memory|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Memory|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -260,7 +263,7 @@
       <PreprocessorDefinitions>ZYDIS_STATIC_BUILD;MEMORY_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpp23</LanguageStandard>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)..\src\windows;$(SolutionDir)..\src\Events;$(SolutionDir)..\src\execution_state_machine;$(SolutionDir)..\src\execution_state_machine\execution_phase;$(SolutionDir)..\src\execution_state_machine\transitions;$(SolutionDir)..\src\utils;$(SolutionDir)..\src\managers;$(SolutionDir)..\src;C:\Users\zlowe\Desktop\_dev\zydis\include;C:\Users\zlowe\Desktop\_dev\zydis\dependencies\zycore\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
