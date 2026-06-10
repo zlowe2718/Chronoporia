@@ -1,0 +1,62 @@
+;
+; pmu_driver.inf
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System ; TODO: specify appropriate Class
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318} ; TODO: specify appropriate ClassGuid
+Provider    = %ManufacturerName%
+CatalogFile = pmu_driver.cat
+DriverVer   = ; TODO: set DriverVer in stampinf property pages
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+pmu_driver.sys = 1,,
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName% = Standard,NT$ARCH$.10.0...16299 ; %13% support introduced in build 16299
+
+[Standard.NT$ARCH$.10.0...16299]
+%pmu_driver.DeviceDesc% = pmu_driver_Device, Root\pmu_driver ; TODO: edit hw-id
+
+[pmu_driver_Device.NT]
+CopyFiles = File_Copy
+
+[File_Copy]
+pmu_driver.sys
+
+;-------------- Service installation
+[pmu_driver_Device.NT.Services]
+AddService = pmu_driver,%SPSVCINST_ASSOCSERVICE%, pmu_driver_Service_Inst
+
+; -------------- pmu_driver driver install sections
+[pmu_driver_Service_Inst]
+DisplayName    = %pmu_driver.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\pmu_driver.sys
+
+[pmu_driver_Device.NT.Wdf]
+KmdfService = pmu_driver, pmu_driver_wdfsect
+
+[pmu_driver_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE = 0x00000002
+ManufacturerName = "<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+DiskName = "pmu_driver Installation Disk"
+pmu_driver.DeviceDesc = "pmu_driver Device"
+pmu_driver.SVCDESC = "pmu_driver Service"
