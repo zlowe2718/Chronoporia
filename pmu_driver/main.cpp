@@ -1,5 +1,6 @@
 #include <ntddk.h>
 #include <intrin.h>
+#include <ntdef.h>
 #include <ntstatus.h>
 #include <wdm.h>
 
@@ -13,6 +14,8 @@ constexpr uint64_t AMD_PERF_CTR0 = 0xC0010201ULL;   // counter register;      CT
 constexpr uint64_t AMD_USR = (1ULL << 16);   // Enable Ring 3 tracing (USR mode)
 constexpr uint64_t AMD_OS  = (1ULL << 17);   // Enable Ring 0 tracing (Kernel mode) Counts hardware interrupts
 constexpr uint64_t AMD_EN  = (1ULL << 22);   // per-counter enable -- this is the enable, not a global MSR
+
+constexpr uint64_t CR4_PCE_BIT = (1ULL << 8);
 
 #define IOCTL_SET_AMD_PROFILING_EVENT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS)
 UNICODE_STRING DEVICE_NAME = RTL_CONSTANT_STRING(L"\\Device\\AMDDevice");
@@ -29,6 +32,13 @@ static uint64_t AmdSel(uint32_t eventCode, uint32_t umask) {
 }
 
 static ULONG_PTR ProgramSelOnThisCpu([[maybe_unused]] ULONG_PTR Ctx) {
+    // Read current CR4 value
+    ULONG_PTR cr4 = __readcr4();
+
+    // Set Bit 8 (PCE) to 1
+    cr4 |= CR4_PCE_BIT;
+    __writecr4(cr4);
+
     __writemsr(AMD_PERF_CTR0, 0);
 
     // event 0xC2 = retired branch instructions
@@ -36,43 +46,41 @@ static ULONG_PTR ProgramSelOnThisCpu([[maybe_unused]] ULONG_PTR Ctx) {
     return 0;
 }
 
+static ULONG_PTR UnloadSelOnThisCpu([[maybe_unused]] ULONG_PTR Ctx) {
+    __writemsr(AMD_PERF_CTR0, 0);
+    __writemsr(AMD_PERF_CTL0, 0);
+    return 0;
+}
+
 static NTSTATUS ConfigureCounters() {
-    // claim the counter resource so we don't collide with other profiling drivers
-    PHYSICAL_COUNTER_RESOURCE_LIST rl;
-    RtlZeroMemory(&rl, sizeof(rl));
-    rl.Count = 1;
-    rl.Descriptors[0].Type = ResourceTypeSingle;      // single counter
-    rl.Descriptors[0].u.CounterIndex = 0;             // the PMC index
+    // Register the PMC index with the OS per-thread virtualization. Must be
+    // called while profiling is disabled
+    HARDWARE_COUNTER hc; 
+    RtlZeroMemory(&hc, sizeof(hc));
+    hc.Type = PMCCounter;
+    hc.Index = 0;       // the pmc index
+    NTSTATUS status = KeSetHardwareCounterConfiguration(&hc, 1);
 
-    GROUP_AFFINITY ga; 
-    RtlZeroMemory(&ga, sizeof(ga));
-    
-    // specify all the logical processors in group (64 for x64 and 32 for x86)
-    // This needs to be rerun and incrementing the group count for more than 64 logical processors
-    ga.Mask = ~0ull;   
-    ga.Group = 0;
-
-    // Unfortunately this doesn't work for HYPER-V VMs.  Find a workaround later?
-    HANDLE counter_handle = nullptr;
-    NTSTATUS st = HalAllocateHardwareCounters(&ga, 1, &rl, &counter_handle);
-    
-    if (!NT_SUCCESS(st)) return st;
+    if (!NT_SUCCESS(status)) return status;
 
     // Run the msr writes on every processor
     KeIpiGenericCall(ProgramSelOnThisCpu, 0);
 
-    // Register the PMC index with the OS per-thread virtualization. Must be
-    // called while profiling is disabled
-    HARDWARE_COUNTER hc; RtlZeroMemory(&hc, sizeof(hc));
-    hc.Type = PMCCounter;
-    hc.Index = 0;       // the pmc index
-    return KeSetHardwareCounterConfiguration(&hc, 1);
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS HandleCustomIOCTL([[maybe_unused]] PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {
-    ConfigureCounters();
-	Irp->IoStatus.Status = STATUS_SUCCESS;
+    PIO_STACK_LOCATION stackLocation = NULL;
+	stackLocation = IoGetCurrentIrpStackLocation(Irp);
+
+    NTSTATUS status = STATUS_SUCCESS;
+	if (stackLocation->Parameters.DeviceIoControl.IoControlCode == IOCTL_SET_AMD_PROFILING_EVENT) {
+        status = ConfigureCounters();
+	}
+
+	Irp->IoStatus.Status = status;
+    Irp->IoStatus.Information = 0;
 	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
 	return STATUS_SUCCESS;
@@ -104,7 +112,9 @@ NTSTATUS HandleOpenAndClose([[maybe_unused]] PDEVICE_OBJECT DeviceObject, PIRP I
 void DriverUnload([[maybe_unused]] PDRIVER_OBJECT DriverObject) {
     // Clean up settings across all cores on unload
     KeSetHardwareCounterConfiguration(NULL,0); 
-    HalFreeHardwareCounters(0);
+
+    // Clean up the pmu on every processor
+    KeIpiGenericCall(UnloadSelOnThisCpu, 0);
 
     // Clean up device links
     IoDeleteDevice(DriverObject->DeviceObject);

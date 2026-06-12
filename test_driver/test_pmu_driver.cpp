@@ -1,9 +1,37 @@
 #include <Windows.h>
 #include <print>
 #include <string>
+#include <winnt.h>
 #include "test_pmu_driver.h"
 
-#define IOCTL_SPOTLESS CTL_CODE(FILE_DEVICE_UNKNOWN, 0x2049, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_SET_AMD_PROFILING_EVENT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+// Keep the optimizer from collapsing the calibration loop into a closed form.
+#pragma optimize("", off)
+static volatile uint64_t g_sink;
+static void calib_loop(uint64_t iters) {
+    for (uint64_t i = 0; i < iters; i++) g_sink += i;  // back-edge = our branch
+}
+#pragma optimize("", on)
+
+static bool read_counter(HANDLE h, uint64_t* out) {
+    PERFORMANCE_DATA pd; ZeroMemory(&pd, sizeof(pd));
+    pd.Size    = sizeof(pd);
+    pd.Version = PERFORMANCE_DATA_VERSION;     // verify constant + field names in winnt.h
+    DWORD err = ReadThreadProfilingData(h, READ_THREAD_PROFILING_FLAG_HARDWARE_COUNTERS, &pd);
+    if (err != ERROR_SUCCESS)   { printf("Read failed: %lu\n", err); return false; }
+    if (pd.HwCountersCount < 1) { printf("no counters (count=%u)\n", pd.HwCountersCount); return false; }
+    *out = pd.HwCounters[0].Value;
+    return true;
+}
+
+static uint64_t measure(HANDLE h, uint64_t iters) {
+    uint64_t a, b;
+    if (!read_counter(h, &a)) return ~0ull;
+    calib_loop(iters);
+    if (!read_counter(h, &b)) return ~0ull;
+    return b - a;                              // delta cancels the read/overhead branches
+}
 
 int main() {
     HANDLE device = INVALID_HANDLE_VALUE;
@@ -19,11 +47,38 @@ int main() {
     if (device == INVALID_HANDLE_VALUE)
     {
         std::print("> Could not open device with error {}\n", GetLastError());
+        CloseHandle(device);
         return 1;
     }
 
-    status = DeviceIoControl(device, IOCTL_SPOTLESS, inBuffer, sizeof(inBuffer), outBuffer, sizeof(outBuffer), &bytesReturned, (LPOVERLAPPED)NULL);
-    std::print("DeviceIoControl returned status {}", status);
+    SetThreadAffinityMask(GetCurrentThread(), 1ull << 0);   // pin: remove migration as a variable for now
+
+    status = DeviceIoControl(device, IOCTL_SET_AMD_PROFILING_EVENT, inBuffer, sizeof(inBuffer), outBuffer, sizeof(outBuffer), &bytesReturned, (LPOVERLAPPED)NULL);
+    if (status == 0) {
+        std::print("DeviceIoControl returned status {}", GetLastError());
+    }
+
+    HANDLE prof = nullptr;
+    if (EnableThreadProfiling(GetCurrentThread(), 0, 0x1 /*index 0*/, &prof) != ERROR_SUCCESS) {
+        printf("EnableThreadProfiling failed: %lu\n", GetLastError());
+        UnloadDriver(L"PMUDriver");
+        CloseHandle(device);
+        return 1;
+    }
+
+    const uint64_t N = 10'000'000;
+    uint64_t c1 = measure(prof, N), c2 = measure(prof, 2*N);
+    printf("N=%llu br=%llu | 2N br=%llu | ratio=%.4f (want ~2.0) | per-iter=%.4f\n",
+           (unsigned long long)N, (unsigned long long)c1, (unsigned long long)c2,
+           c1 ? (double)c2/c1 : 0.0, c1 ? (double)(c2-c1)/N : 0.0);
+
+    const int K = 1000; uint64_t mn=~0ull, mx=0, first=0;
+    for (int k=0;k<K;k++){ uint64_t c=measure(prof,N); if(!k)first=c; if(c<mn)mn=c; if(c>mx)mx=c; }
+    printf("determinism: first=%llu min=%llu max=%llu spread=%llu\n",
+           (unsigned long long)first,(unsigned long long)mn,(unsigned long long)mx,
+           (unsigned long long)(mx-mn));
+
+    DisableThreadProfiling(prof);    
 
     UnloadDriver(L"PMUDriver");
 
