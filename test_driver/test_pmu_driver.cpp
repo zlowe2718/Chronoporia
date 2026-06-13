@@ -9,29 +9,32 @@
 // Keep the optimizer from collapsing the calibration loop into a closed form.
 #pragma optimize("", off)
 static volatile uint64_t g_sink;
-static void calib_loop(uint64_t iters) {
-    for (uint64_t i = 0; i < iters; i++) g_sink += i;  // back-edge = our branch
-}
-#pragma optimize("", on)
-
-static bool read_counter(HANDLE h, uint64_t* out) {
-    PERFORMANCE_DATA pd; ZeroMemory(&pd, sizeof(pd));
-    pd.Size    = sizeof(pd);
-    pd.Version = PERFORMANCE_DATA_VERSION;     // verify constant + field names in winnt.h
-    DWORD err = ReadThreadProfilingData(h, READ_THREAD_PROFILING_FLAG_HARDWARE_COUNTERS, &pd);
-    if (err != ERROR_SUCCESS)   { printf("Read failed: %lu\n", err); return false; }
-    if (pd.HwCountersCount < 1) { printf("no counters (count=%u)\n", pd.HwCountersCount); return false; }
-    *out = pd.HwCounters[0].Value;
-    return true;
-}
-
 static uint64_t measure(HANDLE h, uint64_t iters) {
     uint64_t a, b;
-    if (!read_counter(h, &a)) return ~0ull;
-    calib_loop(iters);
-    if (!read_counter(h, &b)) return ~0ull;
-    return b - a;                              // delta cancels the read/overhead branches
+    PERFORMANCE_DATA pd_1, pd_2; 
+    ZeroMemory(&pd_1, sizeof(pd_1));
+    ZeroMemory(&pd_2, sizeof(pd_2));
+
+    pd_1.Size    = sizeof(pd_1);
+    pd_1.Version = PERFORMANCE_DATA_VERSION;
+
+    pd_2.Size    = sizeof(pd_2);
+    pd_2.Version = PERFORMANCE_DATA_VERSION; 
+    
+    // Read counter to start
+    ReadThreadProfilingData(h, READ_THREAD_PROFILING_FLAG_HARDWARE_COUNTERS, &pd_1);
+    a = pd_1.HwCounters[0].Value;
+
+    // branch runner inline to prevent some switches
+    for (uint64_t i = 0; i < iters; i++) g_sink += i;  // back-edge = our branch
+
+    // Read counter to finish
+    ReadThreadProfilingData(h, READ_THREAD_PROFILING_FLAG_HARDWARE_COUNTERS, &pd_1);
+    b = pd_1.HwCounters[0].Value;
+    return b - a;
 }
+
+#pragma optimize("", on)
 
 int main() {
     HANDLE device = INVALID_HANDLE_VALUE;
