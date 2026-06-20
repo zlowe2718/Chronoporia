@@ -90,6 +90,13 @@ public:
 
 };
 
+
+// TODO: This isn't a partially persistent array since its not an array of fat node arrays (vector<vector<FatNode>>)
+// Can probably remove as memory needs to be fully persistent and threads/dlls can just be a tree.  (most likely an undo tree)
+// E.g. T1 -> T2 -> T3              // run 1
+//       |     |-> T4 -> T5         // run 2
+//       |-> T6 -> T7               // run 3
+//                  |-> T8          // run 4
 template <typename Data>
 class PartiallyPersistentArray {
 public:

@@ -7,12 +7,21 @@
 #include "thread_events.h"
 #include "shared_library_events.h"
 #include "windows/nt_wrappers.h"
+#include <algorithm>
+#include <cstdint>
 #include <map>
+#include <print>
 #include <stack>
 
 namespace {
     std::vector<chronoporia::Event> event_log;
     std::map<DWORD, std::stack<chronoporia::Event>> pending_thread_events;
+
+    uint64_t replayed_global_seq = 0;
+    
+    // TODO: make this cleaner.  Is it worth using shared_ptr for this?
+    // a map of thread id to the index of the pending replay finish.  The index is the index of the event log
+    std::map<DWORD, std::stack<uint64_t>> pending_replay_end_events;
 
     void AddEvent(chronoporia::Event new_event) {
         auto itr = std::upper_bound(event_log.begin(), event_log.end(), new_event->global_seq,             
@@ -73,8 +82,35 @@ namespace chronoporia {
         return nullptr;
     }
 
-    void ReplayEvent(const uintptr_t rip_address) {
+    void ReplayEvent(const uintptr_t rip_address, const DWORD thread_id) {
+        auto it = std::find_if(event_log.begin() + replayed_global_seq, event_log.end(), [rip_address](Event &event) {
+            return event->event_rip == rip_address;
+        });
+
+        if (it == event_log.end()) {
+            std::print("Could not find event at address {}", rip_address);
+            return;
+        }
+
+        auto idx = it - event_log.begin();
+        auto &event = *event_log[idx];
+        event.ReplayEvent();
+
+        if (event.replay_kind == ReplayKind::Execute) {
+            pending_replay_end_events[thread_id].push(idx);
+        }
+    }
+
+    void ReplayEventEnd(const uintptr_t rip_address, const DWORD thread_id) {
+        auto& replay_event_stack = pending_replay_end_events[thread_id];
+        if (replay_event_stack.empty()) return;
+
+        uint64_t idx = replay_event_stack.top();
+
+        event_log[idx]->ReplayEventEnd();
+        replay_event_stack.pop();
         
+        RemoveBreakpoint(rip_address, thread_id);
     }
 
 }

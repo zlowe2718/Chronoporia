@@ -41,6 +41,8 @@ namespace chronoporia {
             }
 
         virtual void FinishEvent(const CONTEXT& thread_ctx) override;
+        virtual void ReplayEvent() override;
+        virtual void ReplayEventEnd() override;
     };
 
     // NtTerminateThread
@@ -66,5 +68,6 @@ namespace chronoporia {
             }
 
         virtual void FinishEvent(const CONTEXT& thread_ctx) override;
+        virtual void ReplayEvent() override {};
     };
 }

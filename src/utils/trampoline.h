@@ -21,7 +21,8 @@ void CreateTrampolineRegion(uint64_t region_size=4096);
 uintptr_t CreateTrampoline(const uintptr_t address);
 
 // After all trampolines are created call this to commit them into memory
-void FinalizeTrampolineRegion();
+// Returns the starting address of the trampoline
+uintptr_t FinalizeTrampolineRegion();
 
 // Cleanup memory allocated to the trampoline when we no longer need it
 void DestroyTrampolineRegion();

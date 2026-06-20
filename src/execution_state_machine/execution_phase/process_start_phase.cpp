@@ -1,7 +1,9 @@
 #include "process_start_phase.h"
+#include "error_transition.h"
 #include "globals.h"
 #include "nt_wrappers.h"
 #include "breakpoint_manager.h"
+#include "record_transition.h"
 
 namespace chronoporia {
 
@@ -48,7 +50,7 @@ namespace chronoporia {
             } else {
                 DWORD last_error = GetLastError();
                 printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
-                return TransitionToError {last_error};
+                return TransitionToError {false, last_error};
             }
         }               
     }

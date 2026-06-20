@@ -1,5 +1,6 @@
 #pragma once
 #include "base_execution.h"
+#include "reconstruction_transition.h"
 
 namespace chronoporia {
 

@@ -28,17 +28,19 @@ using namespace std::chrono_literals;
 // I'm using futures with a wait time of 0 to essentially spin lock the debugger process so we know exactly
 // when the thread is finished without worrying about timeouts
 
+
+// TODO: Make time restoration a util instead of a phase?  I need to know which phase to move to next
 namespace chronoporia {
     // TODO: reenable shell code execution.  Order should be dll -> threads -> memory
     // During the dll and thread fixing we'll need to be running WaitForDebugEvent so the process
     // Can proceed with unloading/loading dlls and destroying/creating threads
     void TimeRestorePhase::Enter() {
-        auto dlls_to_unload = RestoreDLLsAtSequence(target_sequence);
+        auto dlls_to_unload = RestoreDLLsAtSequence(globals::run_id, globals::run_sequence, target_run_id_, target_run_sequence_);
 
-        code_size = AddDllUnload(dlls_to_unload);
-        code_address = WriteShellCodeBufferToProcess();
+        code_size_ = AddDllUnload(dlls_to_unload);
+        code_address_ = WriteShellCodeBufferToProcess();
 
-        TrackShellCodeBreakpoint(code_address + code_size - 1);
+        TrackShellCodeBreakpoint(code_address_ + code_size_ - 1);
 
         // Thread hijacking to run shell code
         HANDLE hThread = GetThreadHandle(globals::main_thread_id);
@@ -46,7 +48,7 @@ namespace chronoporia {
         ctx.ContextFlags = CONTEXT_ALL;
         GetThreadContext(hThread, &ctx);
 
-        ctx.Rip = code_address;
+        ctx.Rip = code_address_;
         // Align RSP to 16 bytes — the sub rsp, 0x28 in the
         // shellcode will maintain alignment from here
         ctx.Rsp = ctx.Rsp & ~0xFULL;
@@ -56,10 +58,10 @@ namespace chronoporia {
 
     Transition TimeRestorePhase::Run() {
         if (!RunDllRestore()) {
-            return TransitionToError {GetLastError()};
+            return TransitionToError {false, GetLastError()};
         }
         if (!RunThreadRestore()) {
-            return TransitionToError {GetLastError()};
+            return TransitionToError {false, GetLastError()};
         }
         return TransitionToReconstruction {};
     } 
@@ -121,10 +123,10 @@ namespace chronoporia {
         DWORD last_error;
         bool debug_event_success;
 
-        unload_dlls_and_threads = std::async(std::launch::async, [this]() {
-            RestoreThreadsAtSequence(target_sequence);
+        unload_dlls_and_threads_ = std::async(std::launch::async, [this]() {
+            RestoreThreadsAtSequence(globals::run_id, globals::run_sequence, target_run_id_, target_run_sequence_);
         });
-        std::future_status status = unload_dlls_and_threads.wait_for(0ms);
+        std::future_status status = unload_dlls_and_threads_.wait_for(0ms);
         while (status != std::future_status::ready) {
             // Do I need to resume the process here?
             debug_event_success = WaitForDebugEvent(&de, 0);
@@ -152,7 +154,7 @@ namespace chronoporia {
 
                 if (last_error == ERROR_SEM_TIMEOUT) {
                     // check if dlls and threads have been unloaded
-                    status = unload_dlls_and_threads.wait_for(0ms);
+                    status = unload_dlls_and_threads_.wait_for(0ms);
                 } else {
                     printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
                     globals::running = false;
@@ -164,7 +166,13 @@ namespace chronoporia {
     }
 
     void TimeRestorePhase::Exit() {
-        RestoreMemoryAtSequence(target_sequence);
+        RestoreMemoryAtSequence(target_run_id_, target_run_sequence_);
+        
+        // Once we've restored now we start a "new" run 
+        // TODO: This may need to be moved into the different "playing" phases because this will always increment
+        //  even if we're just jumping around from snapshot to snapshot
+        globals::run_id += 1;
+        globals::run_sequence = 0;
         return;
     }
 }

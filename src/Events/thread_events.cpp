@@ -1,6 +1,7 @@
 #include "thread_events.h"
 #include "thread_manager.h"
 #include <map>
+#include <print>
 
 namespace {
     std::map<DWORD, DWORD> orignal_thread_to_new_thread;
@@ -22,12 +23,20 @@ namespace chronoporia {
         HANDLE temp_handle;
         DuplicateHandle(globals::process_handle, returned_thread, GetCurrentProcess(), &temp_handle, 0, false, DUPLICATE_SAME_ACCESS);
 
-        TrackThread(GetThreadId(temp_handle), global_seq);
+        TrackThread(GetThreadId(temp_handle), global_seq, run_id, run_sequence);
         CloseHandle(temp_handle);
+    }
+
+    void ThreadCreateEvent::ReplayEvent() {
+        std::print("Thread Create Event Replay called");
+    }
+
+    void ThreadCreateEvent::ReplayEventEnd() {
+        std::print("Thread Create Event Replay End called");
     }
 
     void ThreadDestroyEvent::FinishEvent(const CONTEXT& thread_ctx) {
         return_status_ = thread_ctx.Rax;
-        UntrackThread(thread_id_, global_seq);
+        UntrackThread(thread_id_, global_seq, run_id, run_sequence);
     }
 }

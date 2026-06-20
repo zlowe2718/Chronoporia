@@ -27,9 +27,6 @@
     <ClCompile Include="..\src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\Events\snapshot_events.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\Events\thread_events.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -81,6 +78,15 @@
     <ClCompile Include="..\src\managers\plugin_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\execution_state_machine\execution_phase\debugger_phase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\managers\trampoline_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\snapshot_log.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\event_log.h">
@@ -102,9 +108,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Events\shared_library_events.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\Events\snapshot_events.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Events\thread_events.h">
@@ -177,6 +180,36 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\managers\plugin_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\execution_state_machine\execution_phase\debugger_phase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\execution_state_machine\transitions\debugger_transition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\execution_state_machine\transitions\reconstruction_transition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\execution_state_machine\transitions\transition_variant.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\managers\nondeterminism_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\managers\trampoline_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\execution_tree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\fully_persistent_array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utils\trampoline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\snapshot_log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

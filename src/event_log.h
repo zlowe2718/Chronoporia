@@ -14,22 +14,17 @@ namespace chronoporia {
     void LogEvent(Event event);
     // void ProcessEvent();
 
-    void OnBreakpointEnter(const uintptr_t address, const DWORD thread_id);
-    void OnBreakpointReturn(const uintptr_t address, const DWORD thread_id, const CONTEXT& ctx);
+    void OnBreakpointEnter(const uintptr_t rip_address, const DWORD thread_id);
+    void OnBreakpointReturn(const uintptr_t rip_address, const DWORD thread_id, const CONTEXT& ctx);
 
-    Event CreateEventFromBpAddress(const uintptr_t address, const DWORD thread_id, const CONTEXT& ctx);
+    Event CreateEventFromBpAddress(const uintptr_t addrip_addressess, const DWORD thread_id, const CONTEXT& ctx);
 
     // Take in an address and replay or stub the next event in the log.  Look through the log in case replayed events
     //  are out of order from the event log
-    void ReplayEvent(const uintptr_t address);
+    void ReplayEvent(const uintptr_t rip_address, const DWORD thread_id);
 
-    // TODO: Implement.  This will be called during a non-deterministic event like NtAllocateVirtualMemory.  Since we'd need to replay
-    // That function anyways, we'll pass in the parameters needed and let the OS handle it.
-    void ReplayFunctionEvent();
-    
-    // TODO: Implement.  This will be called during a non-deterministic event like NtQueryPerformanceCounter or RtlGenRandom.
-    // Since those return non-deterministic values we need to stub the function on replay and just supply the returned value
-    void StubFunctionEvent();
+    // Finish gathering information for event we need to re-execute like grabbing the out handle from NtCreateThreadEx
+    void ReplayEventEnd(const uintptr_t rip_address, const DWORD thread_id);
 
     // TODO: implement.  Jump to an event in the event_log 
     void JumpToEvent(const uint64_t event_seq);

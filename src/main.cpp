@@ -11,6 +11,7 @@ bool AttachToProcess() {
 	return true;
 }
 
+// TODO: Edit the CreateProcess call to run the program as a separate executable (in a separate window)
 int main(int argc, char *argv[]) {
     STARTUPINFOA si {0};
     PROCESS_INFORMATION pi {0};

@@ -1,7 +1,7 @@
 #include "reconstruction_phase.h"
 #include "error_transition.h"
 #include "globals.h"
-#include "playback_transition.h"
+#include "debugger_transition.h"
 #include "snapshot_log.h"
 #include "thread_utils.h"
 #include "trampoline.h"
@@ -41,22 +41,12 @@
 *
 * TODO: For multiple threads, deconflict non-det events when they could be called out of order in the future.  I.e. run 1 -> thread 1 calls WaitForSingleObject then thread 2 calls WaitForSingleObject, but on run 2
 * thread 2 calls WaitForSingleObject first.  Probably need to match function args and thread context?
-*
-* I wonder if i can match thread stack memory at address to synchronize threads?.  In theory thread stack memory should be unique?  Maybe a global sync point for thread pools though?  Or is there a good way to
-* to synchronize thread pools so similar threads pull similar tasks?  Future problem, for now probably just don't cache any lines in a thread pool and instead have a global sync point (like 20 tasks completed at this point).
 */
 
 namespace chronoporia {
 
     void ReconstructionPhase::Enter() {
-        // TODO: When taking snapshots I'll be saving this into the memory store but does it even matter?  When going forwards or backwards I'll still need to keep track of this
-        // So it might just be worth keeping 
-        CreateTrampolineRegion();
-        CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtCreateThreadEx));
-        CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtTerminateThread));
-        CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(LdrLoadDll));
-        CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(LdrUnloadDll));
-        FinalizeTrampolineRegion();
+        globals::run_id += 1;
     }
 
 
@@ -65,22 +55,20 @@ namespace chronoporia {
         DWORD last_error;
         bool debug_event_success;
 
-        // TODO: In the future I need a better way to schronize all threads to where we stopped but for now lets just use execution time
-        long long execution_time_remaining = globals::snapshot_interval * 1000; // microseconds
-        long long wait_timeout = 1000 * 1000; // microseconds
+        long long wait_timeout = 1000; // milliseconds
+        long long wait_timeout_us = wait_timeout * 1000; // microseconds
         auto execution_resume_time = std::chrono::system_clock::now();
-
+        uint32_t snapshots_remaining = globals::snapshot_interval / wait_timeout;
 
         while (globals::running) {
-            debug_event_success = WaitForDebugEvent(&de, wait_timeout / 1000); //convert back to milliseconds
+            debug_event_success = WaitForDebugEvent(&de, wait_timeout_us / 1000); //convert back to milliseconds
             auto execution_stop_time = std::chrono::system_clock::now();
 
             if (debug_event_success) {
                 long long microseconds_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(execution_stop_time - execution_resume_time).count(); 
-                wait_timeout -= microseconds_elapsed;
-                execution_time_remaining -= microseconds_elapsed;
+                wait_timeout_us -= microseconds_elapsed;
 
-                if (wait_timeout < 0) wait_timeout = 0;
+                if (wait_timeout_us < 0) wait_timeout_us = 0;
 
                 DWORD continue_status = DBG_CONTINUE;
 
@@ -105,20 +93,21 @@ namespace chronoporia {
             } else {
                 last_error = GetLastError();
 
-                // TODO: may need to later account for extra events coming in after process was suspended
-                // timeout occurred, take a snapshot.  Threads are NOT suspended on a timeout
                 if (last_error == ERROR_SEM_TIMEOUT) {
                     SuspendProcess();
+                    SnapshotProcess(SnapshotType::MicroSnapshot);
 
-                    if (execution_time_remaining <= 0) {
-                        return TransitionToPlayback {};    
+                    snapshots_remaining -= 1;
+                    // We've taken all the micro snapshots needed.  Now we can act like a normal debugger
+                    if (snapshots_remaining == 0) {
+                        return TransitionToDebugger {};
                     }
-                    
-                    SnapshotProcess();
+
+                    ResumeProcess();
                 } else {
                     printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
                     globals::running = false;
-                    return TransitionToError {last_error};
+                    return TransitionToError {false, last_error};
                 }
                 execution_resume_time = std::chrono::system_clock::now();
             }
@@ -127,10 +116,7 @@ namespace chronoporia {
         return TransitionToError {0};
     }
 
-    void ReconstructionPhase::Exit() {
-        RemoveAllPermanentBreakpoints();
-        DestroyTrampolineRegion();
-    }
+    void ReconstructionPhase::Exit() {}
 
     DWORD ReconstructionPhase::HandleDebugException(const DEBUG_EVENT* debug_event) {
         const EXCEPTION_RECORD* er = &debug_event->u.Exception.ExceptionRecord;
@@ -152,12 +138,13 @@ namespace chronoporia {
 
         switch (bp_type) {
             case BreakpointType::Permanent: {
-                ReplayEvent(rip_address);
+                ReplayEvent(rip_address, thread_id);
                 break;
             }
-            // case BreakpointType::Return {
-            //     FinishEventReturn();
-            // }
+            case BreakpointType::Return: {
+                ReplayEventEnd(rip_address, thread_id);
+                break;
+            }
             case BreakpointType::SpinLock: {
                 break;
             }

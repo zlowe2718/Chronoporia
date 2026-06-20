@@ -40,7 +40,7 @@ namespace chronoporia {
             }
     
         virtual void FinishEvent(const CONTEXT& thread_ctx) override;
-
+        virtual void ReplayEvent() override {};
     };
 
     class SharedLibraryUnloadEvent : public BaseEvent {
@@ -57,5 +57,6 @@ namespace chronoporia {
             }
     
         virtual void FinishEvent(const CONTEXT& thread_ctx) override;
+        virtual void ReplayEvent() override {};
     };
 }

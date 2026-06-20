@@ -1,13 +1,18 @@
 #include "memory_manager.h"
+#include "fully_persistent_array.h"
 #include "globals.h"
 #include <basetsd.h>
-#include <memoryapi.h>
+#include <cstdint>
+#include <algorithm>
 
 namespace {
     // An unordered map of allocation base ptr to the partially persistent memory region history
     std::unordered_map<uintptr_t, chronoporia::MemoryRegionHistory<4096>> process_memory_history;
+    
+    // If address in blacklist, don't record
+    std::vector<uintptr_t> address_blacklist;
 
-    std::vector<chronoporia::PageMemory> GetBlockMemory(const chronoporia::BlockHistory<4096>& block_history, uint64_t block_size, uint64_t target_sequence) {
+    std::vector<chronoporia::PageMemory> GetBlockMemory(const chronoporia::BlockHistory<4096>& block_history, uint64_t block_size, uint32_t target_run_id, uint32_t target_run_sequence) {
         std::vector<chronoporia::PageMemory> rebuilt_block_memory;
         rebuilt_block_memory.resize(block_size / 4096);
 
@@ -16,7 +21,7 @@ namespace {
             uint64_t page_offset = (page_address - block_history.base_address) / 4096;
             memcpy(
                 rebuilt_block_memory.data() + page_offset, 
-                persistent_cache_array.get(target_sequence).data(), 
+                persistent_cache_array.get(target_run_id, target_run_sequence).data(), 
                 4096
             );
         }
@@ -37,7 +42,7 @@ namespace {
 
 namespace chronoporia {
 
-void RestoreMemoryAtSequence(uint64_t target_sequence) {
+void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequence) {
     // First Free all private allocations
     MEMORY_BASIC_INFORMATION m;
     for (char *address = NULL; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
@@ -54,14 +59,8 @@ void RestoreMemoryAtSequence(uint64_t target_sequence) {
     }
 
     for (const auto& [allocation_base, region_history] : process_memory_history) {
-        auto event_idx = std::upper_bound(region_history.events.begin(), region_history.events.end(), target_sequence,
-            [](uint64_t seq, const MemoryEvent& event) {
-                return seq < event.global_sequence;
-            }
-        ) - region_history.events.begin();
-
         // If the most recent event is freed then skip over this
-        if (region_history.events[event_idx - 1].event_type == MemoryEventType::FREED) continue;
+        if (region_history.events.get(target_run_id, target_run_sequence) == MemoryEventType::FREED) continue;
 
         VirtualQueryEx(globals::process_handle, reinterpret_cast<void *>(allocation_base), &m, sizeof(m));
 
@@ -88,18 +87,12 @@ void RestoreMemoryAtSequence(uint64_t target_sequence) {
             DWORD old_protect;
             SIZE_T bytes_written;
 
-            auto mbi_idx = std::upper_bound(block_history.mbi_history.begin(), block_history.mbi_history.end(), target_sequence,
-                [](uint64_t seq, const MBIHistory& event) {
-                    return seq < event.global_sequence;
-                }
-            ) - block_history.mbi_history.begin();
-
-            const MBIHistory& mbi = block_history.mbi_history[mbi_idx - 1];
+            MBIHistory mbi = block_history.mbi_history.get(target_run_id, target_run_sequence);
 
             void *base_address_ptr = reinterpret_cast<void *>(block_history.base_address);
             uint64_t block_size = mbi.size;
 
-            std::vector<PageMemory> rebuilt_block = GetBlockMemory(block_history, block_size, target_sequence);
+            std::vector<PageMemory> rebuilt_block = GetBlockMemory(block_history, block_size, target_run_id, target_run_sequence);
 
             if (mbi.state == MEM_COMMIT)
             {
@@ -154,7 +147,7 @@ void RestoreMemoryAtSequence(uint64_t target_sequence) {
     }
 };
 
-void SnapshotMemory(uint64_t global_sequence) {
+void SnapshotMemory(uint64_t global_sequence, uint32_t run_id, uint32_t run_sequence) {
     MEMORY_BASIC_INFORMATION m {};
 
     for (void *address = NULL; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
@@ -168,29 +161,42 @@ void SnapshotMemory(uint64_t global_sequence) {
         // Exclude KUSER_SHARED_DATA — OS-managed read-only page, no need to snapshot
         if (current_address >= globals::kUserSharedDataBaseAddress && current_address <= globals::kUserSharedDataEndAddress) continue;
         
+        // TODO: optimize later?
+        if (std::find(
+            address_blacklist.begin(), 
+            address_blacklist.end(), 
+            reinterpret_cast<uintptr_t>(current_address)
+        ) != address_blacklist.end()) continue;
+
         uintptr_t allocation_base = reinterpret_cast<uintptr_t>(m.AllocationBase);
         uintptr_t base_address = reinterpret_cast<uintptr_t>(m.BaseAddress);
 
         // Start a new memory region at each allocation base boundary
         if (current_address == m.AllocationBase && !process_memory_history.contains(allocation_base)) {
             MemoryRegionHistory<4096> region_history {};
-            MemoryEvent event {global_sequence, MemoryEventType::CREATED};
             region_history.allocation_protect = m.AllocationProtect;
-            region_history.events.push_back(event);
-            process_memory_history[allocation_base] = region_history;
+            region_history.events = FullyPersistentArray<MemoryEventType> {run_id, run_sequence, global_sequence, MemoryEventType::CREATED};
+            process_memory_history[allocation_base] = std::move(region_history);
         }
 
         auto& region_history = process_memory_history[allocation_base];
         region_history.total_region_size += m.RegionSize;
 
+        MBIHistory mbi {m.State, m.Protect, m.Type, m.RegionSize};
+
         if (!region_history.block_history.contains(base_address)) {
-            BlockHistory<4096> block_history {allocation_base, base_address, {}, {}};
-            region_history.block_history[base_address] = block_history;
+            BlockHistory<4096> block_history {
+                allocation_base,
+                base_address,
+                FullyPersistentArray<MBIHistory> {run_id, run_sequence, global_sequence, mbi},
+                {}
+            };
+            region_history.block_history[base_address] = std::move(block_history);
+        } else {
+            region_history.block_history[base_address].mbi_history.update(run_id, run_sequence, global_sequence, mbi);
         }
 
         auto& block_history = region_history.block_history[base_address];
-        MBIHistory mbi {global_sequence, m.State, m.Protect, m.Type, m.RegionSize};
-        block_history.mbi_history.push_back(mbi);
 
         if (m.State == MEM_COMMIT && m.Protect != PAGE_NOACCESS) {
             std::vector<std::array<CacheLine, 4096 / 64>> memory_pages;
@@ -203,16 +209,24 @@ void SnapshotMemory(uint64_t global_sequence) {
                 uintptr_t page_address = base_address + page_idx * 4096;
                 
                 if (!page_history.contains(page_address)) {
-                    page_history[page_address] = PartiallyPersistentCacheArray<4096> {global_sequence, page_memory};
-                    
-                    VerifyMemoryAtProcessAddress<kMemoryDebug>(page_address, page_history[page_address].get(global_sequence).data(), 4096);
+                    page_history[page_address] = FullyPersistentCacheArray<4096> {run_id, run_sequence, global_sequence, page_memory};
                 } else {
-                    // TODO: get the previous page?
-                    //page_history[page_address].update(global_sequence, page_memory)
+                    // Pulls the most recent recorded state for this run, since run_sequence hasn't been recorded yet for this page
+                    PageMemory previous_page = page_history[page_address].get(run_id, run_sequence);
+
+                    for (uint32_t cache_line_idx = 0; cache_line_idx < 4096 / 64; cache_line_idx++) {
+                        if (memcmp(previous_page.data() + cache_line_idx * 64, page_memory[cache_line_idx].data(), 64) == 0) continue;
+
+                        page_history[page_address].update(run_id, run_sequence, global_sequence, cache_line_idx, page_memory[cache_line_idx]);
+                    }
                 }
             }
         }
     }
 };
+
+void AddBlacklistAddress(uintptr_t address) {
+    address_blacklist.push_back(address);
+}
 
 }

@@ -9,19 +9,18 @@
 namespace chronoporia {
 
     struct ThreadInfo {
-        uint64_t snapshot_seq;
         DWORD thread_id;
         CONTEXT thread_context;
         bool loaded;
     };
 
-    void TrackThread(const DWORD thread_id, const uint64_t global_seq);
-    void UntrackThread(const DWORD thread_id, const uint64_t global_seq);
-    void TrackAllProgramThreads(const uint64_t global_seq);
+    void TrackThread(const DWORD thread_id, const uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq);
+    void UntrackThread(const DWORD thread_id, const uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq);
+    void TrackAllProgramThreads(const uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq);
 
-    void SnapshotThreads(const uint64_t global_seq, const uint64_t snapshot_seq);
+    void SnapshotThreads(const uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq);
 
-    void RestoreThreadsAtSequence(const uint64_t global_seq);
+    void RestoreThreadsAtSequence(const uint32_t from_run_id, const uint32_t from_run_seq, const uint32_t to_run_id, const uint32_t to_run_seq);
     void TerminateThreadIds(const std::vector<ThreadInfo>& thread_ids);
 
 }
