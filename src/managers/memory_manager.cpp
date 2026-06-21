@@ -4,6 +4,7 @@
 #include <basetsd.h>
 #include <cstdint>
 #include <algorithm>
+#include <optional>
 
 namespace {
     // An unordered map of allocation base ptr to the partially persistent memory region history
@@ -59,8 +60,10 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
     }
 
     for (const auto& [allocation_base, region_history] : process_memory_history) {
-        // If the most recent event is freed then skip over this
-        if (region_history.events.get(target_run_id, target_run_sequence) == MemoryEventType::FREED) continue;
+        // No event recorded yet along this lineage at this point (region created after
+        // target_run_sequence), or the most recent event is freed - either way, skip.
+        std::optional<MemoryEventType> event = region_history.events.try_get(target_run_id, target_run_sequence);
+        if (!event || *event == MemoryEventType::FREED) continue;
 
         VirtualQueryEx(globals::process_handle, reinterpret_cast<void *>(allocation_base), &m, sizeof(m));
 
@@ -87,7 +90,11 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
             DWORD old_protect;
             SIZE_T bytes_written;
 
-            MBIHistory mbi = block_history.mbi_history.get(target_run_id, target_run_sequence);
+            // Block may have been created after target_run_sequence (e.g. by a later snapshot) -
+            // skip, there's nothing to restore it to.
+            std::optional<MBIHistory> mbi_opt = block_history.mbi_history.try_get(target_run_id, target_run_sequence);
+            if (!mbi_opt) continue;
+            MBIHistory mbi = *mbi_opt;
 
             void *base_address_ptr = reinterpret_cast<void *>(block_history.base_address);
             uint64_t block_size = mbi.size;

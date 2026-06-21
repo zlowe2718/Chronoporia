@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -200,6 +201,15 @@ public:
     // TODO: caller should ensure (run_id, run_seq) actually exists in the run tree
     Data get(uint32_t run_id, uint32_t run_seq) const {
         return find_fat_node(run_id, run_seq)->data;
+    }
+
+    // Same lookup as get(), but returns std::nullopt instead of crashing when the tracked entity
+    // (region/block/etc.) wasn't created yet as of (run_id, run_seq) - e.g. it branched off a
+    // lineage point that predates the entity's creation.
+    std::optional<Data> try_get(uint32_t run_id, uint32_t run_seq) const {
+        const FatNode* node = find_fat_node(run_id, run_seq);
+        if (!node) return std::nullopt;
+        return node->data;
     }
 
 private:
