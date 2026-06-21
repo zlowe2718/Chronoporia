@@ -76,12 +76,14 @@ namespace chronoporia {
             }
 
             ExecutionNode *node = nullptr;
+            bool found = false;
 
             while (!stack.empty()) {
                 node = stack.back();
                 stack.pop_back();
 
                 if (node->run_id == target_run_id && node->run_seq == target_run_seq) {
+                    found = true;
                     break;
                 }
 
@@ -93,12 +95,16 @@ namespace chronoporia {
             }
 
             // Ensure we found the node
-            assert(!stack.empty());
+            assert(found);
             return node->state;
         }
 
         void RevertToState(uint32_t target_run_id, uint32_t target_run_seq) {
-            std::vector<ExecutionNode*> stack {primary_branch_};
+            std::vector<ExecutionNode*> stack {};
+
+            for (const auto& primary_node : primary_branch_) {
+                stack.push_back(primary_node.get());
+            }
 
             while (!stack.empty()) {
                 ExecutionNode* node = stack.back();
@@ -110,12 +116,14 @@ namespace chronoporia {
                 }
 
                 for (const auto& [_, children] : node->branch_children) {
-                    stack.push_back(children);
+                    for (const auto& child : children) {
+                        stack.push_back(child.get());
+                    }
                 }
             }
 
-            // Ensure we found the node
-            assert(!stack.empty());
+            // Target node not found in tree
+            assert(false);
         }
 
     private:

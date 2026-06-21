@@ -12,6 +12,12 @@
 
 *.dll
 *.exe
+
+# CMake
+/build/
+/out/
+compile_commands.json
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
