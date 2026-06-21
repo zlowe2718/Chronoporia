@@ -11,7 +11,7 @@ namespace chronoporia {
 
     };
 
-    Transition ProcessStartPhase::Run() {
+    Transitions ProcessStartPhase::Run() {
         DEBUG_EVENT de;
         bool debug_event_success;
 

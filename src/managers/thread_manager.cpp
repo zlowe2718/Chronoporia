@@ -4,6 +4,7 @@
 #include "globals.h"
 #include <TlHelp32.h>
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -79,18 +80,18 @@ namespace chronoporia {
         std::vector<ThreadInfo> snapped_threads {};
         std::vector<ThreadInfo> current_threads {};
 
-        ThreadInfo from_thread_info {};
-        ThreadInfo to_thread_info {};
+        std::optional<ThreadInfo> from_thread_info {};
+        std::optional<ThreadInfo> to_thread_info {};
         
         for (const auto& [_, execution_tree] : process_thread_history) {
             to_thread_info = execution_tree.GetState(to_run_id, to_run_seq);
-            if (to_thread_info.loaded) {
-                snapped_threads.push_back(to_thread_info);
+            if (to_thread_info && to_thread_info->loaded) {
+                snapped_threads.push_back(*to_thread_info);
             }
             
             from_thread_info = execution_tree.GetState(from_run_id, from_run_seq);
-            if (from_thread_info.loaded) {
-                current_threads.push_back(from_thread_info);
+            if (from_thread_info && from_thread_info->loaded) {
+                current_threads.push_back(*from_thread_info);
             }
         }        
 
@@ -134,5 +135,11 @@ namespace chronoporia {
         }
     }
 
+
+    void CreateThreadHistoryBranch(const uint32_t target_run_id, const uint32_t target_run_seq, const uint32_t new_run_id) {
+        for (auto& [_, execution_tree] : process_thread_history) {
+            execution_tree.RevertToState(target_run_id, target_run_seq, new_run_id);
+        }
+    }
 }
 

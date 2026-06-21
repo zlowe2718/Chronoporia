@@ -63,7 +63,7 @@ namespace chronoporia {
 
     void DebuggerPhase::Enter() {}
 
-    Transition DebuggerPhase::Run() {
+    Transitions DebuggerPhase::Run() {
         while (globals::running) {
             if (process_suspended_) {
                 std::string input = UserInput("chronoporia> ");
@@ -75,7 +75,8 @@ namespace chronoporia {
                 }
 
                 if (strcmp(token->command.c_str(), "snapshot")) {
-                    return TransitionToTimeRestore {};
+                    // TODO: Fix this later with a better way to transition back to the debugger
+                    return TransitionToTimeRestore {{true}, 0, 0, TransitionsBox{Transitions{TransitionToDebugger {}}}};
                 }
             }
         }

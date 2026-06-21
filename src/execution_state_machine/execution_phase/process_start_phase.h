@@ -7,7 +7,7 @@ namespace chronoporia {
     class ProcessStartPhase: public BaseExecutionPhase {
     public:
         void Enter() override;
-        Transition Run() override;
+        Transitions Run() override;
         void Exit() override;
 
     private:

@@ -76,6 +76,7 @@ set(CHRONOPORIA_SOURCES
   src/execution_state_machine/execution_phase/record_phase.cpp
   src/execution_state_machine/execution_phase/time_restore_phase.cpp
   src/execution_state_machine/state_machine.cpp
+  src/execution_state_machine/transitions/transitions_box.cpp
   src/globals.cpp
   src/main.cpp
   src/managers/breakpoint_manager.cpp

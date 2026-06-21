@@ -99,6 +99,11 @@ namespace chronoporia {
         if (event.replay_kind == ReplayKind::Execute) {
             pending_replay_end_events[thread_id].push(idx);
         }
+
+        CONTEXT ctx = RedirectToTrampoline(rip_address, thread_id);
+        uintptr_t return_address;
+        ReadProcessMemory(globals::process_handle, reinterpret_cast<void*>(ctx.Rsp), &return_address, 8, nullptr);
+        CreateReturnBreakpoint(return_address, thread_id);
     }
 
     void ReplayEventEnd(const uintptr_t rip_address, const DWORD thread_id) {

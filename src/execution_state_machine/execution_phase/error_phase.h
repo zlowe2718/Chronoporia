@@ -23,7 +23,7 @@ namespace chronoporia {
             globals::running = false;
         };
         
-        Transition Run() override {
+        Transitions Run() override {
             return TransitionToError {};
         };
 

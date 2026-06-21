@@ -9,12 +9,14 @@
 #include "globals.h"
 #include "thread_utils.h"
 #include "nt_wrappers.h"
+#include "trampoline.h"
 #include "transition.h"
 #include <errhandlingapi.h>
 #include <future>
 #include <minwinbase.h>
 #include <winbase.h>
 #include <chrono>
+#include <winnt.h>
 
 using namespace std::chrono_literals;
 
@@ -56,15 +58,17 @@ namespace chronoporia {
 
     }
 
-    Transition TimeRestorePhase::Run() {
+    Transitions TimeRestorePhase::Run() {
         if (!RunDllRestore()) {
+            assert(false);
             return TransitionToError {false, GetLastError()};
         }
         if (!RunThreadRestore()) {
+            assert(false);
             return TransitionToError {false, GetLastError()};
         }
-        return TransitionToReconstruction {};
-    } 
+        return std::move(*next_transition_.value);
+    }
 
     // TODO: When loading dlls (calling RestoreDLLsAtSequence) I'll need to eventually need to move that under the async call like threads and probably combine these functions
     bool TimeRestorePhase::RunDllRestore() {
@@ -90,16 +94,39 @@ namespace chronoporia {
                     case EXCEPTION_DEBUG_EVENT:
                         const EXCEPTION_RECORD& er = de.u.Exception.ExceptionRecord;
 
+                        // Since permanent breakpoints are permanent check what type of breakpoint it is and handle accordingly
                         if (er.ExceptionCode == STATUS_BREAKPOINT) {
-                            SuspendThreadId(globals::main_thread_id);
-                            ContinueDebugEvent(
-                                de.dwProcessId,
-                                de.dwThreadId,
-                                continue_status
-                            );
-                            // TODO: do an explicit check for the correct shellcode breakpoint
-                            return true;
-                        }            
+
+                            DWORD thread_id = de.dwThreadId;
+                            uintptr_t rip_address = GetRipAddress(thread_id) - 1;
+                            auto bp_type = GetBreakpointType(rip_address, thread_id);
+
+                            switch (bp_type) {
+                                // Permanent breakpoints just need to run the trampoline and continue
+                                case BreakpointType::Permanent: {
+                                    RedirectToTrampoline(rip_address, thread_id);
+                                    break;
+                                }
+                                case BreakpointType::ShellCode: {
+                                    bool correct_shell_addr = code_address_ + code_size_ - 1 == rip_address;
+
+                                    if (!correct_shell_addr) return false;
+
+                                    SuspendThreadId(globals::main_thread_id);
+                                    ContinueDebugEvent(
+                                        de.dwProcessId,
+                                        de.dwThreadId,
+                                        continue_status
+                                    );
+
+                                    return true;
+                                }
+                                default: {
+                                    return false;
+                                }
+                            }
+                        }
+                        break; 
                 }
 
                 ContinueDebugEvent(
@@ -128,12 +155,13 @@ namespace chronoporia {
         });
         std::future_status status = unload_dlls_and_threads_.wait_for(0ms);
         while (status != std::future_status::ready) {
-            // Do I need to resume the process here?
             debug_event_success = WaitForDebugEvent(&de, 0);
 
             if (debug_event_success) {
                 DWORD continue_status = DBG_CONTINUE;
 
+                // TODO: check if STATUS_BREAKPOINT and if so check what type of breakpoint it is.  If permanent breakpoint then run RedirectToTrampoline
+                // shouldn't need to handle anything else here since this is just to unblock the debugger main thread
                 switch (de.dwDebugEventCode) {
                     case CREATE_THREAD_DEBUG_EVENT:
                         printf("Thread created\n");
@@ -141,6 +169,28 @@ namespace chronoporia {
                     case EXIT_THREAD_DEBUG_EVENT:
                         printf("Thread exiting\n");
                         break;
+                    case EXCEPTION_DEBUG_EVENT:
+                        const EXCEPTION_RECORD& er = de.u.Exception.ExceptionRecord;
+
+                        // Since permanent breakpoints are permanent check what type of breakpoint it is and handle accordingly
+                        if (er.ExceptionCode == STATUS_BREAKPOINT) {
+
+                            DWORD thread_id = de.dwThreadId;
+                            uintptr_t rip_address = GetRipAddress(thread_id) - 1;
+                            auto bp_type = GetBreakpointType(rip_address, thread_id);
+
+                            switch (bp_type) {
+                                // Permanent breakpoints just need to run the trampoline and continue
+                                case BreakpointType::Permanent: {
+                                    RedirectToTrampoline(rip_address, thread_id);
+                                    break;
+                                }
+                                // This shouldn't happen, something went wrong 
+                                default: {
+                                    return false;
+                                }
+                            }
+                        }
                 }
 
                 ContinueDebugEvent(
@@ -173,6 +223,9 @@ namespace chronoporia {
         //  even if we're just jumping around from snapshot to snapshot
         globals::run_id += 1;
         globals::run_sequence = 0;
+        
+        CreateThreadHistoryBranch(target_run_id_, target_run_sequence_, globals::run_id);
+        CreateModuleHistoryBranch(target_run_id_, target_run_sequence_, globals::run_id);
         return;
     }
 }

@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "execution_tree.h"
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -48,18 +49,18 @@ namespace chronoporia {
         std::vector<DllInfo> snapped_dlls {};
         std::vector<DllInfo> dlls_to_free {};
 
-        DllInfo from_dll_info {};
-        DllInfo to_dll_info {};
+        std::optional<DllInfo> from_dll_info {};
+        std::optional<DllInfo> to_dll_info {};
 
         for (const auto& [_, execution_tree] : process_module_history) {
             to_dll_info = execution_tree.GetState(to_run_id, to_run_seq);
-            if (to_dll_info.loaded) {
-                snapped_dlls.push_back(to_dll_info);
+            if (to_dll_info && to_dll_info->loaded) {
+                snapped_dlls.push_back(*to_dll_info);
             }
 
             from_dll_info = execution_tree.GetState(from_run_id, from_run_seq);
-            if (from_dll_info.loaded) {
-                dlls_to_free.push_back(from_dll_info);
+            if (from_dll_info && from_dll_info->loaded) {
+                dlls_to_free.push_back(*from_dll_info);
             }
         }
 
@@ -73,5 +74,11 @@ namespace chronoporia {
         }
 
         return dlls_to_free;
+    }
+
+    void CreateModuleHistoryBranch(const uint32_t target_run_id, const uint32_t target_run_seq, const uint32_t new_run_id) {
+        for (auto& [_, execution_tree] : process_module_history) {
+            execution_tree.RevertToState(target_run_id, target_run_seq, new_run_id);
+        }      
     }
 }

@@ -16,7 +16,7 @@ namespace chronoporia {
 
 
         void Enter() override;
-        Transition Run() override;
+        Transitions Run() override;
         void Exit() override;
     private:
         DWORD HandleDebugException(const DEBUG_EVENT* debug_event);

@@ -1,3 +1,4 @@
+#pragma once
 #include "record_transition.h"
 #include "error_transition.h"
 #include "time_restore_transition.h"
@@ -9,13 +10,15 @@
 
 namespace chronoporia  {
 
-    using Transitions = std::variant<
+    struct Transitions : std::variant<
         Transition,
-        TransitionToRecording, 
-        TransitionToError, 
-        TransitionToTimeRestore, 
-        TransitionToReconstruction, 
+        TransitionToRecording,
+        TransitionToError,
+        TransitionToTimeRestore,
+        TransitionToReconstruction,
         TransitionToDebugger
-    >;
+    > {
+        using variant::variant;
+    };
 
 }

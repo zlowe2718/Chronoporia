@@ -2,6 +2,7 @@
 #include "debugger_transition.h"
 #include "error_transition.h"
 #include "nt_wrappers.h"
+#include "reconstruction_transition.h"
 #include "record_transition.h"
 #include "thread_utils.h"
 #include "time_restore_transition.h"
@@ -27,14 +28,14 @@ namespace chronoporia {
         }
     }
 
-    Transition RecordingPhase::Run() {
+    Transitions RecordingPhase::Run() {
         ResumeProcess();
         return DebugLoop();
     }
 
     void RecordingPhase::Exit() {}
 
-    Transition RecordingPhase::DebugLoop() {
+    Transitions RecordingPhase::DebugLoop() {
         DEBUG_EVENT de;
         DWORD last_error;
         bool debug_event_success;
@@ -92,7 +93,7 @@ namespace chronoporia {
                 if (last_error == ERROR_SEM_TIMEOUT) {
                     SuspendProcess();
                     // TODO: Fix this later with a better way to transition back to the debugger 
-                    return TransitionToTimeRestore {true, 0, 0, TransitionToDebugger {}};
+                    return TransitionToTimeRestore {true, 0, 0, TransitionsBox{Transitions{TransitionToReconstruction {true}}}};
                 } else {
                     printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
                     globals::running = false;

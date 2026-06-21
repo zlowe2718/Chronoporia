@@ -18,16 +18,18 @@ namespace chronoporia {
             , process_suspended_ {t.process_suspended}
             , target_run_id_ {t.target_run_id}
             , target_run_sequence_ {t.target_run_sequence}
+            , next_transition_ {std::move(t.next_transition)}
         {};
 
         void Enter() override;
-        Transition Run() override;
+        Transitions Run() override;
         void Exit() override;
     private:
         bool RunDllRestore();
         bool RunThreadRestore();
         
         DWORD HandleDebugException(const DEBUG_EVENT* debug_event);
+        DWORD HandleBreakpoint(const DEBUG_EVENT *debug_event);
 
         uint64_t code_size_;
         uintptr_t code_address_;
@@ -35,6 +37,7 @@ namespace chronoporia {
         uint32_t target_run_id_;
         uint32_t target_run_sequence_;
         std::future<void> unload_dlls_and_threads_;
+        TransitionsBox next_transition_;
     };
 
 }

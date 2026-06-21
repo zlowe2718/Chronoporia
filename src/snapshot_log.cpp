@@ -18,14 +18,14 @@ namespace chronoporia {
     }
 
     void SnapshotProcess(SnapshotType snapshot_type) {
-        globals::run_sequence += 1;
-
         Snapshot new_snapshot {snapshot_type, globals::run_id, globals::run_sequence, globals::global_sequence};
 
         SnapshotThreads(globals::global_sequence, globals::run_id, globals::run_sequence);
         SnapshotMemory(globals::global_sequence, globals::run_id, globals::run_sequence);
 
         snapshot_history.AddChild(std::move(new_snapshot), globals::run_id, globals::run_sequence, globals::global_sequence);
+
+        globals::run_sequence += 1;
     }
 
 }

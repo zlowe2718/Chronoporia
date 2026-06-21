@@ -15,10 +15,10 @@ namespace chronoporia {
         {}
 
         void Enter() override;
-        Transition Run() override;
+        Transitions Run() override;
         void Exit() override;
     private:
-        Transition DebugLoop();
+        Transitions DebugLoop();
         DWORD HandleDebugException(const DEBUG_EVENT* debug_event);
         DWORD HandleBreakpoint(const DEBUG_EVENT *debug_event);
         void SetupNonDetCapture();

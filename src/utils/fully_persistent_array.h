@@ -57,6 +57,14 @@ public:
     std::unordered_map<uint32_t, RunHistory> runs; // run_id -> per-cache-line delta history for that run
     std::unordered_map<uint32_t, BranchPoint> lineage; // run_id -> where it branched from (root run has no entry)
 
+    // Mirror of the most recently written contents of this page, kept in sync by the
+    // constructor and update(). Recording always advances forward along a single active
+    // run, so this always reflects that run's current state - it lets callers on the hot
+    // record path (e.g. SnapshotMemory's diff-before-write check) read the current page
+    // in O(1) instead of reconstructing it via find_fat_node() on every cache line.
+    // Historical/branched reads still go through get(), which is unaffected by this cache.
+    PageMemory latest_page_memory {};
+
     FullyPersistentCacheArray() {};
 
     FullyPersistentCacheArray(uint32_t run_id, uint32_t run_seq, uint64_t global_seq, const std::array<CacheLine, CacheLineAmount>& page_memory) {
@@ -70,6 +78,8 @@ public:
             memcpy(fat_node.cache_memory.data(), page_memory[cache_line_idx].data(), kCacheLineSize);
 
             history.cache_lines[cache_line_idx].push_back(std::move(fat_node));
+
+            memcpy(latest_page_memory.data() + cache_line_idx * kCacheLineSize, page_memory[cache_line_idx].data(), kCacheLineSize);
         }
 
         created_run_id = run_id;
@@ -90,6 +100,8 @@ public:
         memcpy(fat_node.cache_memory.data(), cache_line_memory.data(), kCacheLineSize);
 
         runs[run_id].cache_lines[cache_line_idx].push_back(std::move(fat_node));
+
+        memcpy(latest_page_memory.data() + cache_line_idx * kCacheLineSize, cache_line_memory.data(), kCacheLineSize);
     }
 
     // Convenience path: diff two full pages and record only the cache lines that changed.
@@ -124,6 +136,12 @@ public:
 
         return rebuilt_page;
     };
+
+    // O(1) read of the most recently written page contents, for the active recording run.
+    // See latest_page_memory for why this is safe to use in place of get() on the hot path.
+    const PageMemory& latest() const {
+        return latest_page_memory;
+    }
 
 private:
     // Walk the branch lineage from (run_id, run_seq) back towards the root, returning the

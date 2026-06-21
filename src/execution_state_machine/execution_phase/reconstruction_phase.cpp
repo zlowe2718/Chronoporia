@@ -47,10 +47,14 @@ namespace chronoporia {
 
     void ReconstructionPhase::Enter() {
         globals::run_id += 1;
+
+        if (process_suspended) {
+            ResumeProcess();
+        }
     }
 
 
-    Transition ReconstructionPhase::Run() {
+    Transitions ReconstructionPhase::Run() {
         DEBUG_EVENT de;
         DWORD last_error;
         bool debug_event_success;
@@ -100,7 +104,7 @@ namespace chronoporia {
                     snapshots_remaining -= 1;
                     // We've taken all the micro snapshots needed.  Now we can act like a normal debugger
                     if (snapshots_remaining == 0) {
-                        return TransitionToDebugger {};
+                        return TransitionToDebugger {true};
                     }
 
                     ResumeProcess();
@@ -109,6 +113,7 @@ namespace chronoporia {
                     globals::running = false;
                     return TransitionToError {false, last_error};
                 }
+                wait_timeout_us = wait_timeout * 1000;
                 execution_resume_time = std::chrono::system_clock::now();
             }
         }
@@ -135,6 +140,12 @@ namespace chronoporia {
         // Need to roll back one instruction as the rip stores the pointer to the next instruction
         uintptr_t rip_address = GetRipAddress(thread_id) - 1;
         auto bp_type = GetBreakpointType(rip_address, thread_id);
+
+        // Roll the thread's actual Rip register back to the breakpoint address. For Permanent
+        // breakpoints this gets overwritten anyway by RedirectToTrampoline, but Return breakpoints
+        // need this: RemoveBreakpoint restores the original byte, and without rolling Rip back the
+        // thread resumes one byte into the original instruction.
+        RollBackInstructionPointRegister(thread_id);
 
         switch (bp_type) {
             case BreakpointType::Permanent: {

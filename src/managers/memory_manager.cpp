@@ -52,6 +52,9 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
         if (m.State == MEM_FREE || m.Type == MEM_IMAGE || m.Type == MEM_MAPPED) continue;
         // Skip KUSER_SHARED_DATA
         if (address >= globals::kUserSharedDataBaseAddress && address <= globals::kUserSharedDataEndAddress) continue;
+        // Skip blacklisted regions (e.g. the trampoline region) - these are never snapshotted,
+        // so freeing them here would leave them with nothing to restore them from in the pass below
+        if (std::find(address_blacklist.begin(), address_blacklist.end(), reinterpret_cast<uintptr_t>(m.AllocationBase)) != address_blacklist.end()) continue;
         // TODO: Is this needed? If we free the allocation base this should never trigger? Only act at the allocation base to avoid double-free within the same region
         if (m.BaseAddress != m.AllocationBase) continue;
         // TODO: no need to free TEB.  Do I need to track this in ThreadInfo
@@ -218,8 +221,9 @@ void SnapshotMemory(uint64_t global_sequence, uint32_t run_id, uint32_t run_sequ
                 if (!page_history.contains(page_address)) {
                     page_history[page_address] = FullyPersistentCacheArray<4096> {run_id, run_sequence, global_sequence, page_memory};
                 } else {
-                    // Pulls the most recent recorded state for this run, since run_sequence hasn't been recorded yet for this page
-                    PageMemory previous_page = page_history[page_address].get(run_id, run_sequence);
+                    // O(1) read of the last-materialized page contents instead of reconstructing it
+                    // via find_fat_node() per cache line - see FullyPersistentCacheArray::latest().
+                    const PageMemory& previous_page = page_history[page_address].latest();
 
                     for (uint32_t cache_line_idx = 0; cache_line_idx < 4096 / 64; cache_line_idx++) {
                         if (memcmp(previous_page.data() + cache_line_idx * 64, page_memory[cache_line_idx].data(), 64) == 0) continue;

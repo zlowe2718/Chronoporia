@@ -1,7 +1,6 @@
 #pragma once
 #include "base_execution.h"
 #include "debugger_transition.h"
-#include "error_transition.h"
 
 // TODO: Maybe some kind of graphic eventually like
 //                  Event 1          Event 2          Event 3          Event 4
@@ -25,7 +24,7 @@ namespace chronoporia {
         {};
 
         void Enter() override;
-        Transition Run() override;
+        Transitions Run() override;
         void Exit() override;
     
     private:
