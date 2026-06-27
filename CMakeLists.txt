@@ -11,8 +11,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(CHRONOPORIA_TESTS "Build Catch2 and the unit_tests target" OFF)
+
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 # chronoporia, plugins, and tests used the Unicode character set in their
@@ -39,13 +41,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(zydis)
 
 # ---- Catch2 (unit_tests) ----
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG v3.7.1
-)
-FetchContent_MakeAvailable(Catch2)
-list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+if(CHRONOPORIA_TESTS)
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.7.1
+  )
+  FetchContent_MakeAvailable(Catch2)
+  list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+endif()
 
 # ---- FASM-assembled shellcode object ----
 find_program(FASM_EXECUTABLE fasm REQUIRED)
@@ -126,4 +130,7 @@ add_custom_command(TARGET chronoporia POST_BUILD
 
 add_subdirectory(plugins)
 add_subdirectory(tests)
-add_subdirectory(unit_tests)
+
+if(CHRONOPORIA_TESTS)
+  add_subdirectory(unit_tests)
+endif()
