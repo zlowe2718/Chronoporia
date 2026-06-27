@@ -164,10 +164,10 @@ namespace chronoporia {
                 // shouldn't need to handle anything else here since this is just to unblock the debugger main thread
                 switch (de.dwDebugEventCode) {
                     case CREATE_THREAD_DEBUG_EVENT:
-                        printf("Thread created\n");
+                        TrackThread(de.dwThreadId, globals::global_sequence, globals::run_id, globals::run_sequence);
                         break;
                     case EXIT_THREAD_DEBUG_EVENT:
-                        printf("Thread exiting\n");
+                        UntrackThread(de.dwThreadId, globals::global_sequence, globals::run_id, globals::run_sequence);
                         break;
                     case EXCEPTION_DEBUG_EVENT:
                         const EXCEPTION_RECORD& er = de.u.Exception.ExceptionRecord;
@@ -226,6 +226,7 @@ namespace chronoporia {
         
         CreateThreadHistoryBranch(target_run_id_, target_run_sequence_, globals::run_id);
         CreateModuleHistoryBranch(target_run_id_, target_run_sequence_, globals::run_id);
+        CreateMemoryHistoryBranch(target_run_id_, target_run_sequence_, globals::run_id);
         return;
     }
 }

@@ -23,6 +23,6 @@ namespace chronoporia {
     void CreateThreadHistoryBranch(const uint32_t target_run_id, const uint32_t target_run_seq, const uint32_t new_run_id);
 
     void RestoreThreadsAtSequence(const uint32_t from_run_id, const uint32_t from_run_seq, const uint32_t to_run_id, const uint32_t to_run_seq);
-    void TerminateThreadIds(const std::vector<ThreadInfo>& thread_ids);
+    void TerminateThreadIds(const std::vector<ThreadInfo>& thread_ids, const uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq);
 
 }

@@ -1,6 +1,8 @@
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 #include <map>
 
@@ -160,7 +162,30 @@ namespace chronoporia {
             return std::nullopt;
         }
 
+        // Walks every branch of the tree depth-first, calling formatter(state, run_id, run_seq, global_seq)
+        // for each node to get its display line. Child branches are printed indented under their parent.
+        template <typename Formatter>
+        void Print(Formatter&& formatter) const {
+            for (const auto& [run_id, children] : tree_node_->branch_children) {
+                for (const auto& child : children) {
+                    PrintNode(child.get(), formatter, 0);
+                }
+            }
+        }
+
     private:
+        template <typename Formatter>
+        void PrintNode(ExecutionNode* node, Formatter& formatter, int depth) const {
+            std::string indent(static_cast<size_t>(depth) * 2, ' ');
+            std::printf("%s%s\n", indent.c_str(), formatter(node->state, node->run_id, node->run_seq, node->global_seq).c_str());
+
+            for (const auto& [run_id, children] : node->branch_children) {
+                for (const auto& child : children) {
+                    PrintNode(child.get(), formatter, depth + 1);
+                }
+            }
+        }
+
         std::unique_ptr<ExecutionNode> tree_node_;
         // For simplicity this cursor is the current parent
         ExecutionNode* cursor_;

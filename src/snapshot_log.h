@@ -14,4 +14,5 @@ namespace chronoporia {
 
     void StartSnapshotHistory();
     void SnapshotProcess(SnapshotType snapshot_type);
+    void PrintSnapshotHistory();
 }

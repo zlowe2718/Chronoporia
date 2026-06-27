@@ -68,9 +68,11 @@ namespace chronoporia {
     }
 
     void ReplaceThreadContext(const DWORD thread_id, const CONTEXT& ctx) {
-        HANDLE thread_handle = thread_id_to_handle[thread_id];
+        HANDLE thread_handle = GetThreadHandle(thread_id);
         if (!SetThreadContext(thread_handle, &ctx)) {
-            printf("Thread error: %ld\n", GetLastError());
+            printf("Thread error: %ld\n"
+                   "    Thread handle: %p\n"
+                   "    Thread id: %ld", GetLastError(), thread_handle, thread_id);
         }
     }
 
@@ -93,7 +95,7 @@ namespace chronoporia {
     }
 
     void SuspendThreadId(const DWORD thread_id) {
-        SuspendThread(thread_id_to_handle[thread_id]);
+        SuspendThread(GetThreadHandle(thread_id));
     }
 
     void ResumeAllThreads() {

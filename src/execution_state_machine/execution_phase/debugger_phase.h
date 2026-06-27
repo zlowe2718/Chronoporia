@@ -29,6 +29,8 @@ namespace chronoporia {
     
     private:
         bool process_suspended_; 
+
+        Transitions ResumeProgram();
     };
 
 }

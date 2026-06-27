@@ -27,12 +27,14 @@ namespace chronoporia {
         CloseHandle(temp_handle);
     }
 
+
+    // TODO: need to track thread here so we can correctly pull the current thread state from the execution tree
     void ThreadCreateEvent::ReplayEvent() {
-        std::print("Thread Create Event Replay called");
+        std::print("\nThread Create Event Replay called\n");
     }
 
     void ThreadCreateEvent::ReplayEventEnd() {
-        std::print("Thread Create Event Replay End called");
+        std::print("\nThread Create Event Replay End called\n");
     }
 
     void ThreadDestroyEvent::FinishEvent(const CONTEXT& thread_ctx) {

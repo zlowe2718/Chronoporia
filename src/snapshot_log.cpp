@@ -3,9 +3,20 @@
 #include "thread_manager.h"
 #include "execution_tree.h"
 #include "globals.h"
+#include <string>
 
 namespace {
     chronoporia::ExecutionTree<chronoporia::Snapshot> snapshot_history {{}, 0, 0, 0};
+
+    constexpr std::string to_string(chronoporia::SnapshotType snapshot_type) {
+        switch (snapshot_type) {
+            case chronoporia::SnapshotType::CoarseSnapshot:   return "Coarse Snapshot";
+            case chronoporia::SnapshotType::MicroSnapshot:    return "Micro Snapshot";
+            case chronoporia::SnapshotType::LineSnapshot:     return "Line Snapshot";
+            default:           return "Unknown";
+        }
+    }
+
 }
 
 
@@ -18,6 +29,8 @@ namespace chronoporia {
     }
 
     void SnapshotProcess(SnapshotType snapshot_type) {
+        std::printf("\n --- Taking %s ---\n", to_string(snapshot_type).c_str());
+
         Snapshot new_snapshot {snapshot_type, globals::run_id, globals::run_sequence, globals::global_sequence};
 
         SnapshotThreads(globals::global_sequence, globals::run_id, globals::run_sequence);
@@ -26,6 +39,13 @@ namespace chronoporia {
         snapshot_history.AddChild(std::move(new_snapshot), globals::run_id, globals::run_sequence, globals::global_sequence);
 
         globals::run_sequence += 1;
+    }
+
+    void PrintSnapshotHistory() {
+        snapshot_history.Print([](const Snapshot& snap, uint32_t run_id, uint32_t run_seq, uint64_t global_seq) {
+            return to_string(snap.type) + " [run_id=" + std::to_string(run_id) +
+                   ", run_seq=" + std::to_string(run_seq) + ", global_seq=" + std::to_string(global_seq) + "]";
+        });
     }
 
 }

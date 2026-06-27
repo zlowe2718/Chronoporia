@@ -2,7 +2,10 @@
 #include "error_transition.h"
 #include "globals.h"
 #include "debugger_transition.h"
+#include "module_manager.h"
+#include "module_utils.h"
 #include "snapshot_log.h"
+#include "thread_manager.h"
 #include "thread_utils.h"
 #include "trampoline.h"
 #include "breakpoint_manager.h"
@@ -46,8 +49,6 @@
 namespace chronoporia {
 
     void ReconstructionPhase::Enter() {
-        globals::run_id += 1;
-
         if (process_suspended) {
             ResumeProcess();
         }
@@ -77,7 +78,27 @@ namespace chronoporia {
                 DWORD continue_status = DBG_CONTINUE;
 
                 switch (de.dwDebugEventCode) {
-
+                    // Need to retrack Dlls so that we can correctly find the loaded and unloaded dlls
+                    case LOAD_DLL_DEBUG_EVENT: {
+                        LOAD_DLL_DEBUG_INFO debug_info = de.u.LoadDll;
+                        std::wstring image_name = GetDllNameFromLp(debug_info.lpImageName);
+                        CloseHandle(debug_info.hFile);
+                        TrackDLL(reinterpret_cast<HMODULE>(debug_info.lpBaseOfDll), image_name, globals::global_sequence, globals::run_id, globals::run_sequence);
+                        break;
+                    }
+                    case UNLOAD_DLL_DEBUG_EVENT: {
+                        LOAD_DLL_DEBUG_INFO debug_info = de.u.LoadDll;
+                        UntrackDLL(reinterpret_cast<HMODULE>(debug_info.lpBaseOfDll), globals::global_sequence, globals::run_id, globals::run_sequence);
+                        break;
+                    }
+                    // Need to retrack threads so that we can correctly find the loaded and unloaded dlls 
+                    // TODO: THis should really be handled by the event replay but this is easier for now
+                    case CREATE_THREAD_DEBUG_EVENT:
+                        TrackThread(de.dwThreadId, globals::global_sequence, globals::run_id, globals::run_sequence);
+                        break;
+                    case EXIT_THREAD_DEBUG_EVENT:
+                        UntrackThread(de.dwThreadId, globals::global_sequence, globals::run_id, globals::run_sequence);
+                        break;
                     case EXCEPTION_DEBUG_EVENT:
                         continue_status = HandleDebugException(&de);
                         break;
