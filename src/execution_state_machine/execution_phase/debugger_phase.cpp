@@ -2,6 +2,7 @@
 #include "error_transition.h"
 #include "globals.h"
 #include "nt_wrappers.h"
+#include "quill/LogMacros.h"
 #include "snapshot_log.h"
 #include "thread_utils.h"
 #include "time_restore_transition.h"
@@ -91,8 +92,10 @@ namespace chronoporia {
                         continue;  
                     }
 
+                    // guaranteed by the valid check above
+                    auto target_global_sequence = GetGlobalSequence(run_id, run_seq);
                     // TODO: Fix this later with a better way to transition back to the debugger
-                    return TransitionToTimeRestore {{true}, run_id, run_seq, TransitionsBox{Transitions{TransitionToDebugger {true}}}};
+                    return TransitionToTimeRestore {{true}, run_id, run_seq, target_global_sequence.value(),TransitionsBox{Transitions{TransitionToDebugger {true}}}};
 
                 } else if (command == "resume") {
                     ResumeProgram();

@@ -20,6 +20,8 @@ namespace chronoporia {
     // Finish gathering information for event we need to re-execute like grabbing the out handle from NtCreateThreadEx
     void ReplayEventEnd(const uintptr_t rip_address, const DWORD thread_id);
 
+    void ResetEventReplay(uint64_t global_seq);
+
     // TODO: implement.  Jump to an event in the event_log 
     void JumpToEvent(const uint64_t event_seq);
 }

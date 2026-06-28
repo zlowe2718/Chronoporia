@@ -19,6 +19,7 @@ namespace chronoporia {
         DWORD thread_id;
         uintptr_t event_rip;
         ReplayKind replay_kind;
+        bool replayed;
 
         virtual ~BaseEvent() = default;
 
@@ -26,6 +27,7 @@ namespace chronoporia {
             : thread_id {thread_id}
             , event_rip {event_rip}
             , replay_kind { ReplayKind::Execute }
+            , replayed {false}
             {
                 global_seq = globals::global_sequence;
                 run_id = globals::run_id;

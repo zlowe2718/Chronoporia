@@ -1,4 +1,5 @@
 add_executable(unit_tests
+  quill_backend_impl.cpp
   test_execution_tree.cpp
   test_fully_persistent_array.cpp
   test_module_utils.cpp
@@ -32,8 +33,12 @@ target_include_directories(unit_tests PRIVATE
   "${CMAKE_SOURCE_DIR}/src/managers"
   "${CMAKE_SOURCE_DIR}/src/Events"
 )
-target_compile_definitions(unit_tests PRIVATE ZYDIS_STATIC_BUILD)
-target_link_libraries(unit_tests PRIVATE Catch2::Catch2WithMain Zydis ntdll)
+target_compile_definitions(unit_tests PRIVATE
+  ZYDIS_STATIC_BUILD
+  NOMINMAX
+  QUILL_COMPILE_ACTIVE_LOG_LEVEL=9
+)
+target_link_libraries(unit_tests PRIVATE Catch2::Catch2WithMain Zydis quill::quill ntdll)
 
 set_target_properties(unit_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
