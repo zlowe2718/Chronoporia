@@ -33,6 +33,10 @@ namespace {
     }
 }
 
+// TODO: on memory revert I need to reset all events to NotReplayed starting after the run_id run_seq value
+//  This lets me then search in case of ooo events (from multithreading).  Also need to match events to the caller thread
+//  When replaying
+
 namespace chronoporia {
 
     void LogEvent(Event event) {

@@ -87,7 +87,7 @@ namespace chronoporia {
                         break;
                     }
                     case UNLOAD_DLL_DEBUG_EVENT: {
-                        LOAD_DLL_DEBUG_INFO debug_info = de.u.LoadDll;
+                        UNLOAD_DLL_DEBUG_INFO debug_info = de.u.UnloadDll;
                         UntrackDLL(reinterpret_cast<HMODULE>(debug_info.lpBaseOfDll), globals::global_sequence, globals::run_id, globals::run_sequence);
                         break;
                     }

@@ -31,6 +31,8 @@ int main(int argc, char *argv[]) {
 	StartLogger();
 
     STARTUPINFOA si {0};
+	si.cb = sizeof(STARTUPINFOA);
+
     PROCESS_INFORMATION pi {0};
     std::string ws = "";
 	chronoporia::InitializeWrapperAddresses();
@@ -39,7 +41,7 @@ int main(int argc, char *argv[]) {
 		ws += argv[i];
 		ws += " ";
 	}
-    CreateProcessA(
+    BOOL process_created = CreateProcessA(
 		NULL,
 		&ws[0],
 		NULL,
@@ -51,6 +53,10 @@ int main(int argc, char *argv[]) {
 		&si,
 		&pi
 	);
+	if (process_created == 0) {
+		LOG_ERROR(globals::logger, "Could not create child process");
+		return 1;
+	}
 	LOG_INFO(globals::logger, "Child Process Created");
 
 	globals::process_id = pi.dwProcessId;

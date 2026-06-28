@@ -61,6 +61,10 @@ bool RemoveBreakpoint(uintptr_t address, const DWORD thread_id) {
 }
 
 bool RemovePermanentBreakpoint(uintptr_t address) {
+    if (!address_to_bp.contains(address)) {
+        LOG_ERROR(globals::logger, "Address {:p} did not exist in the address_to_bp map when removing", address);
+        return false;
+    }
     const Breakpoint& bp = address_to_bp[address];
     bool bp_removed = RestoreMemory(bp);
     if (bp_removed) {
@@ -72,14 +76,14 @@ bool RemovePermanentBreakpoint(uintptr_t address) {
 }
 
 bool RemoveAllPermanentBreakpoints() {
-    bool bp_removed;
+    bool bp_removed = true;
     std::unordered_map<uintptr_t, uintptr_t> bp_to_remove = permanent_bp_to_trampoline;
 
     for (const auto& [address, _] : bp_to_remove) {
         bp_removed = RemovePermanentBreakpoint(address);
         if (!bp_removed) return false;
     }
-    return true;
+    return bp_removed;
 }
 
 void WriteBreakpoint(uintptr_t address, BreakpointType bp_type) {
