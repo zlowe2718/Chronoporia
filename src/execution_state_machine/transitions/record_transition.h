@@ -1,9 +1,8 @@
 #pragma once
 
+#include "transition.h"
 namespace chronoporia {
 
-    struct TransitionToRecording {
-        bool process_suspended;
-    };
+    struct TransitionToRecording : public Transition {};
 
 }

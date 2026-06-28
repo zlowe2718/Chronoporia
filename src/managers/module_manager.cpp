@@ -1,7 +1,10 @@
 #include "module_manager.h"
 #include "globals.h"
-#include "partially_persistent_arrays.h"
+#include "execution_tree.h"
+#include "quill/LogMacros.h"
+#include "quill/std/WideString.h"
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -10,57 +13,56 @@ namespace {
     std::map<HMODULE, std::wstring> address_to_name;
     std::unordered_map<
         HMODULE, 
-        chronoporia::PartiallyPersistentArray<chronoporia::DllInfo>
+        chronoporia::ExecutionTree<chronoporia::DllInfo>
     > process_module_history;
 }
 
 namespace chronoporia {
 
-    void TrackDLL(HMODULE dll_handle, std::wstring dll_name, uint64_t global_seq) {
+    void TrackDLL(HMODULE dll_handle, std::wstring dll_name, uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq) {
         DllInfo new_info {dll_handle, dll_name, true};
 
         if (process_module_history.contains(dll_handle)) {
-            process_module_history[dll_handle].update(global_seq, new_info);
+            process_module_history.at(dll_handle).AddChild(std::move(new_info), run_id, run_seq, global_seq);
         } else {
-            process_module_history[dll_handle] = PartiallyPersistentArray<DllInfo>(global_seq, new_info);
+            process_module_history.try_emplace(dll_handle, std::move(new_info), run_id, run_seq, global_seq);
         }
         address_to_name[dll_handle] = dll_name;
     }
 
-    // Loop through all Dlls in process
-    void TrackAllCurrentDLLs(uint64_t global_seq) {
+    // TODO: Loop through all Dlls in process
+    void TrackAllCurrentDLLs(uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq) {
 
     }
 
-    void UntrackDLL(HMODULE dll_handle, uint64_t global_seq) {
+    void UntrackDLL(HMODULE dll_handle, uint64_t global_seq, const uint32_t run_id, const uint32_t run_seq) {
         std::wstring dll_name = address_to_name[dll_handle];
 
         DllInfo new_info {dll_handle, dll_name, false};
 
         if (process_module_history.contains(dll_handle)) {
-            process_module_history[dll_handle].update(global_seq, new_info);
+            process_module_history.at(dll_handle).AddChild(std::move(new_info), run_id, run_seq, global_seq);
         } else {
-            printf("Untracking dll %ls before tracking", dll_name.c_str());
+            LOG_WARNING(globals::logger, "Untracking dll {} before tracking", dll_name);
         }        
     }
 
-    std::vector<DllInfo> RestoreDLLsAtSequence(uint64_t target_seq) {
+    std::vector<DllInfo> RestoreDLLsAtSequence(const uint32_t from_run_id, const uint32_t from_run_seq, const uint32_t to_run_id, const uint32_t to_run_seq) {
         std::vector<DllInfo> snapped_dlls {};
         std::vector<DllInfo> dlls_to_free {};
 
-        DllInfo fetched_dll_info {};
+        std::optional<DllInfo> from_dll_info {};
+        std::optional<DllInfo> to_dll_info {};
 
-        for (const auto& [_, partially_persistent_dll] : process_module_history) {
-            if (target_seq >= partially_persistent_dll.created_version) {
-                fetched_dll_info = partially_persistent_dll.get(target_seq);
-                if (fetched_dll_info.loaded) {
-                    snapped_dlls.push_back(fetched_dll_info);
-                }
+        for (const auto& [_, execution_tree] : process_module_history) {
+            to_dll_info = execution_tree.GetState(to_run_id, to_run_seq);
+            if (to_dll_info && to_dll_info->loaded) {
+                snapped_dlls.push_back(*to_dll_info);
             }
 
-            fetched_dll_info = partially_persistent_dll.get(globals::global_sequence);
-            if (fetched_dll_info.loaded) {
-                dlls_to_free.push_back(fetched_dll_info);
+            from_dll_info = execution_tree.GetState(from_run_id, from_run_seq);
+            if (from_dll_info && from_dll_info->loaded) {
+                dlls_to_free.push_back(*from_dll_info);
             }
         }
 
@@ -74,5 +76,11 @@ namespace chronoporia {
         }
 
         return dlls_to_free;
+    }
+
+    void CreateModuleHistoryBranch(const uint32_t target_run_id, const uint32_t target_run_seq, const uint32_t new_run_id) {
+        for (auto& [_, execution_tree] : process_module_history) {
+            execution_tree.RevertToState(target_run_id, target_run_seq, new_run_id);
+        }      
     }
 }

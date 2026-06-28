@@ -1,5 +1,6 @@
 #pragma once
 #include "base_execution.h"
+#include "reconstruction_transition.h"
 
 namespace chronoporia {
 
@@ -9,9 +10,19 @@ namespace chronoporia {
     //  of the non-deterministic events we captured previously.  The only new events that are created should be line snapshots
     class ReconstructionPhase: public BaseExecutionPhase {
     public:
+        ReconstructionPhase(TransitionToReconstruction&& t) 
+            : process_suspended {t.process_suspended}
+        {}
+
+
         void Enter() override;
-        Transition Run() override;
+        Transitions Run() override;
         void Exit() override;
+    private:
+        DWORD HandleDebugException(const DEBUG_EVENT* debug_event);
+        DWORD HandleBreakpoint(const DEBUG_EVENT *debug_event);
+
+        bool process_suspended;
     };
 
 }

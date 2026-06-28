@@ -1,20 +1,25 @@
 #include "record_phase.h"
+#include "debugger_transition.h"
+#include "error_transition.h"
 #include "nt_wrappers.h"
+#include "reconstruction_transition.h"
+#include "record_transition.h"
 #include "thread_utils.h"
-#include "trampoline.h"
+#include "time_restore_transition.h"
+#include "trampoline_manager.h"
 #include "breakpoint_manager.h"
+#include "thread_manager.h"
 #include "globals.h"
 #include "event_log.h"
-#include "snapshot_events.h"
 #include "module_manager.h"
 #include "module_utils.h"
+#include "snapshot_log.h"
 #include <chrono>
 #include <minwinbase.h>
 
 
 namespace chronoporia {
 
-    // On Recording start create the trampoline of non-det functions
     void RecordingPhase::Enter() {
         child_entry_address = GetChildEntryAddress();
 
@@ -23,17 +28,14 @@ namespace chronoporia {
         }
     }
 
-    Transition RecordingPhase::Run() {
+    Transitions RecordingPhase::Run() {
         ResumeProcess();
         return DebugLoop();
     }
 
-    void RecordingPhase::Exit() {
-        RemoveAllPermanentBreakpoints();
-        DestroyTrampolineRegion();
-    }
+    void RecordingPhase::Exit() {}
 
-    Transition RecordingPhase::DebugLoop() {
+    Transitions RecordingPhase::DebugLoop() {
         DEBUG_EVENT de;
         DWORD last_error;
         bool debug_event_success;
@@ -62,18 +64,18 @@ namespace chronoporia {
                         LOAD_DLL_DEBUG_INFO debug_info = de.u.LoadDll;
                         std::wstring image_name = GetDllNameFromLp(debug_info.lpImageName);
                         CloseHandle(debug_info.hFile);
-                        TrackDLL(reinterpret_cast<HMODULE>(debug_info.lpBaseOfDll), image_name, globals::global_sequence);
+                        TrackDLL(reinterpret_cast<HMODULE>(debug_info.lpBaseOfDll), image_name, globals::global_sequence, globals::run_id, globals::run_sequence);
                         break;
                     }
                     case UNLOAD_DLL_DEBUG_EVENT: {
-                        LOAD_DLL_DEBUG_INFO debug_info = de.u.LoadDll;
-                        UntrackDLL(reinterpret_cast<HMODULE>(debug_info.lpBaseOfDll), globals::global_sequence);
+                        UNLOAD_DLL_DEBUG_INFO debug_info = de.u.UnloadDll;
+                        UntrackDLL(reinterpret_cast<HMODULE>(debug_info.lpBaseOfDll), globals::global_sequence, globals::run_id, globals::run_sequence);
                         break;
                     }
                     case EXIT_PROCESS_DEBUG_EVENT:
                         globals::running = false;
                         continue_status = DBG_EXCEPTION_NOT_HANDLED;
-                        printf("Process exiting with error code %lx\n", de.u.ExitProcess.dwExitCode);
+                        LOG_ERROR(globals::logger, "Process exiting with error code {:x}", de.u.ExitProcess.dwExitCode);
                         break;
                 }
 
@@ -89,26 +91,18 @@ namespace chronoporia {
                 // timeout occurred, take a snapshot.  Threads are NOT suspended on a timeout
                 if (last_error == ERROR_SEM_TIMEOUT) {
                     SuspendProcess();
-                    // std::vector<DirtyPage> dirty_pages = GetDirtyPages();
-                    // TakeCoarseSnapshot(&dirty_pages);
-                    // UntrackAllDirtyPages();
-                    // RestoreMemoryAtAllBreakpoints();
-                    uint64_t target_sequence = GetMostRecentCoarseEvent();
-                    return TransitionToTimeRestore {true, target_sequence };
-                    // SetBreakpointAtAddress(child_entry_address, BreakpointCaller::EntryBreakpoint);
-                    // ResumeProcess();
-                    // wait_timeout = globals::snapshot_interval * 1000;
-                    // current_handling_bp_address = nullptr;
+                    // TODO: Fix this later with a better way to transition back to the debugger 
+                    return TransitionToTimeRestore {true, 0, 0, TransitionsBox{Transitions{TransitionToReconstruction {true}}}};
                 } else {
-                    printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
+                    LOG_ERROR(globals::logger, "Unknown error encountered from WaitDebugEvent {}", last_error);
                     globals::running = false;
-                    return TransitionToError {last_error};
+                    return TransitionToError {false, last_error};
                 }
                 execution_resume_time = std::chrono::system_clock::now();
             }
         }
 
-        return TransitionToError {0};
+        return TransitionToError {false, 0};
     }
 
     DWORD RecordingPhase::HandleDebugException(const DEBUG_EVENT* debug_event) {
@@ -132,17 +126,13 @@ namespace chronoporia {
         CONTEXT ctx = RollBackInstructionPointRegister(thread_id);
         if (rip_address == child_entry_address) {
             RemoveBreakpoint(child_entry_address, globals::main_thread_id);
-
-            auto snapshot = CreateCoarseSnapshotEvent(thread_id, false);
-            LogEvent(std::move(snapshot));
-
-            // make trampoline after we save the memory other I'm saving the breakpoints in the data
-            CreateTrampolineRegion();
-            CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtCreateThreadEx));
-            CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtTerminateThread));
-            CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(LdrLoadDll));
-            CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(LdrUnloadDll));
-            FinalizeTrampolineRegion();
+            TrackAllProgramThreads(globals::global_sequence, globals::run_id, globals::run_sequence);
+            
+            // I'm running this before the process snapshot so the memory snapshots are consistent and because its
+            // useful to have the permanent breakpoint be there permanently for now.
+            LoadTrampoline();
+            StartSnapshotHistory();
+            SnapshotProcess(SnapshotType::CoarseSnapshot);
         } else {
             switch (bp_type) {
                 case BreakpointType::Return: {
@@ -160,10 +150,4 @@ namespace chronoporia {
         }
         return DBG_CONTINUE;
     }
-
-    void RecordingPhase::SetupNonDetCapture() {
-        CreatePermanentBreakpoint(reinterpret_cast<uintptr_t>(NtCreateThreadEx));
-        FinalizeTrampolineRegion();
-    }
-
 }

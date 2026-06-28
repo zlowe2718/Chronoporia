@@ -1,5 +1,6 @@
 #pragma once
 #include "base_execution.h"
+#include "record_transition.h"
 
 namespace chronoporia {
 
@@ -14,10 +15,10 @@ namespace chronoporia {
         {}
 
         void Enter() override;
-        Transition Run() override;
+        Transitions Run() override;
         void Exit() override;
     private:
-        Transition DebugLoop();
+        Transitions DebugLoop();
         DWORD HandleDebugException(const DEBUG_EVENT* debug_event);
         DWORD HandleBreakpoint(const DEBUG_EVENT *debug_event);
         void SetupNonDetCapture();

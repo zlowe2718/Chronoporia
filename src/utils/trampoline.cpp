@@ -55,11 +55,12 @@ uintptr_t CreateTrampoline(const uintptr_t address) {
     return new_trampoline_address;
 }
 
-void FinalizeTrampolineRegion() {
+uintptr_t FinalizeTrampolineRegion() {
     uint64_t region_size = trampoline_region.size() * sizeof(InstructionRegion);
     WriteProcessMemory(globals::process_handle, reinterpret_cast<void *>(trampoline_address), 
         trampoline_region.data(), region_size, nullptr);
     FlushInstructionCache(globals::process_handle, reinterpret_cast<void *>(trampoline_address), region_size);
+    return trampoline_address;
 }
 
 void DestroyTrampolineRegion() {

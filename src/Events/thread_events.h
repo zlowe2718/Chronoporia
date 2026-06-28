@@ -23,10 +23,13 @@ namespace chronoporia {
         IN OPTIONAL PCOBJECT_ATTRIBUTES object_attributes;
         IN HANDLE process_handle;
         ThreadCreateStackArgs stack_args;
+        
         NTSTATUS return_status;
+        HANDLE returned_thread;
 
-        ThreadCreateEvent(DWORD thread_id, const CONTEXT& thread_ctx)
-            : BaseEvent(thread_id)
+        // TODO: read process memory of the in pointers like object_attributes, start_routine, argument...
+        ThreadCreateEvent(DWORD thread_id, uintptr_t event_rip, const CONTEXT& thread_ctx)
+            : BaseEvent(thread_id, event_rip)
             {
                 thread_handle = reinterpret_cast<PHANDLE>(thread_ctx.Rcx);
                 desired_access = thread_ctx.Rdx;
@@ -36,6 +39,8 @@ namespace chronoporia {
             }
 
         virtual void FinishEvent(const CONTEXT& thread_ctx) override;
+        virtual void ReplayEvent() override;
+        virtual void ReplayEventEnd() override;
     };
 
     // NtTerminateThread
@@ -47,8 +52,8 @@ namespace chronoporia {
 
         DWORD thread_id_;
 
-        ThreadDestroyEvent(DWORD thread_id, const CONTEXT& thread_ctx) 
-            : BaseEvent(thread_id)
+        ThreadDestroyEvent(DWORD thread_id, uintptr_t event_rip, const CONTEXT& thread_ctx) 
+            : BaseEvent(thread_id, event_rip)
             {
                 thread_handle_ = reinterpret_cast<HANDLE>(thread_ctx.Rcx);
                 exit_status_ = thread_ctx.Rdx;
@@ -61,5 +66,6 @@ namespace chronoporia {
             }
 
         virtual void FinishEvent(const CONTEXT& thread_ctx) override;
+        virtual void ReplayEvent() override {};
     };
 }
