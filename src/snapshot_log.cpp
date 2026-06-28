@@ -49,4 +49,7 @@ namespace chronoporia {
         });
     }
 
+    bool ValidSnapshotIdSeq(uint32_t run_id, uint32_t run_seq) {
+        return snapshot_history.ExactNodeExists(run_id, run_seq);
+    }
 }

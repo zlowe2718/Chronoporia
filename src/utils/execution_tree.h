@@ -162,6 +162,37 @@ namespace chronoporia {
             return std::nullopt;
         }
 
+        bool ExactNodeExists(uint32_t target_run_id, uint32_t target_run_seq) {
+             std::vector<ExecutionNode*> stack {};
+
+            for (const auto& [_, children] : tree_node_->branch_children) {
+                for (const auto& child : children) {
+                    stack.push_back(child.get());
+                }
+            }
+
+            while (!stack.empty()) {
+                ExecutionNode* node = stack.back();
+                stack.pop_back();
+
+                if (target_run_id == node->run_id && target_run_seq == node->run_seq) {
+                    return true;
+                }
+
+                // look through all branches and only push branch children with a run_id <= target_run_id
+                // For example if we have branches 2, 3, 5 and we're looking for 4 then look at 2, and 3's children because
+                // 4 cannot be a branch of 5 which is later in time
+                for (const auto& [run_id, children] : node->branch_children) {
+                    if (run_id <= target_run_id) {
+                        for (const auto& child : children) {
+                            stack.push_back(child.get());
+                        }
+                    }
+                }
+            }
+            return false;           
+        }
+
         // Walks every branch of the tree depth-first, calling formatter(state, run_id, run_seq, global_seq)
         // for each node to get its display line. Child branches are printed indented under their parent.
         template <typename Formatter>

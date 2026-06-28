@@ -38,6 +38,7 @@ namespace chronoporia {
     // During the dll and thread fixing we'll need to be running WaitForDebugEvent so the process
     // Can proceed with unloading/loading dlls and destroying/creating threads
     void TimeRestorePhase::Enter() {
+        LOG_INFO(globals::logger, "Restoring to run_id={}, run_seq={}", target_run_id_, target_run_sequence_);
         auto dlls_to_unload = RestoreDLLsAtSequence(globals::run_id, globals::run_sequence, target_run_id_, target_run_sequence_);
 
         code_size_ = AddDllUnload(dlls_to_unload);

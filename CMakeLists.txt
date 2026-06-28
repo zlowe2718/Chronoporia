@@ -48,6 +48,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(quill)
 
+# ---- argparse (command-line argument parsing) ----
+FetchContent_Declare(
+  argparse
+  GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+  GIT_TAG v3.1
+)
+FetchContent_MakeAvailable(argparse)
+
 # ---- Catch2 (unit_tests) ----
 if(CHRONOPORIA_TESTS)
   FetchContent_Declare(
@@ -130,7 +138,7 @@ target_compile_definitions(chronoporia PRIVATE
   $<$<CONFIG:Debug>:QUILL_COMPILE_ACTIVE_LOG_LEVEL=QUILL_LOG_LEVEL_DEBUG>
 )
 
-target_link_libraries(chronoporia PRIVATE Zydis quill::quill ntdll)
+target_link_libraries(chronoporia PRIVATE Zydis quill::quill argparse::argparse ntdll)
 
 set_target_properties(chronoporia PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
