@@ -1,5 +1,6 @@
 #include "time_restore_phase.h"
 #include "error_transition.h"
+#include "event_log.h"
 #include "quill/LogMacros.h"
 #include "reconstruction_transition.h"
 #include "shellcode.h"
@@ -68,6 +69,7 @@ namespace chronoporia {
             assert(false);
             return TransitionToError {false, GetLastError()};
         }
+        ResetEventReplay(target_global_sequence_);
         return std::move(*next_transition_.value);
     }
 

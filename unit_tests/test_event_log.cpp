@@ -212,3 +212,86 @@ TEST_CASE("ReplayEvent for an address that was never logged does not crash", "[e
     REQUIRE_NOTHROW(ReplayEvent(FakeAddress(4), thread_id));
     REQUIRE_NOTHROW(ReplayEventEnd(FakeAddress(4), thread_id));
 }
+
+TEST_CASE("Events are only played once per thread") {
+    uintptr_t addr_a = FakeAddress(1);
+    DWORD thread_id = 90001;
+    DWORD thread_id_2 = 80001;
+
+    // Make two events with the same address
+    auto event_a = std::make_unique<TestEvent>(thread_id, addr_a);
+    auto event_b = std::make_unique<TestEvent>(thread_id, addr_a);
+
+    auto event_c = std::make_unique<TestEvent>(thread_id_2, addr_a);
+    auto event_d = std::make_unique<TestEvent>(thread_id_2, addr_a);
+
+    TestEvent* raw_a = event_a.get();
+    TestEvent* raw_b = event_b.get();
+    TestEvent* raw_c = event_c.get();
+    TestEvent* raw_d = event_d.get();
+
+    LogEvent(std::move(event_a));
+    LogEvent(std::move(event_c));
+    LogEvent(std::move(event_b));
+    LogEvent(std::move(event_d));
+
+    ReplayEvent(addr_a, thread_id);
+    REQUIRE(raw_a->replayed);
+    REQUIRE_FALSE(raw_b->replayed);
+    REQUIRE_FALSE(raw_c->replayed);
+    REQUIRE_FALSE(raw_d->replayed);
+
+    ReplayEvent(addr_a, thread_id);
+    REQUIRE(raw_a->replayed);
+    REQUIRE(raw_b->replayed);
+    REQUIRE_FALSE(raw_c->replayed);
+    REQUIRE_FALSE(raw_d->replayed);
+
+    ReplayEvent(addr_a, thread_id_2);
+    REQUIRE(raw_a->replayed);
+    REQUIRE(raw_b->replayed);
+    REQUIRE(raw_c->replayed);
+    REQUIRE_FALSE(raw_d->replayed);
+
+    ReplayEvent(addr_a, thread_id_2);
+    REQUIRE(raw_a->replayed);
+    REQUIRE(raw_b->replayed);
+    REQUIRE(raw_c->replayed);
+    REQUIRE(raw_d->replayed);
+}
+
+TEST_CASE("Events replayed is reset") {
+    uintptr_t addr_a = FakeAddress(1);
+    DWORD thread_id = 90001;
+    DWORD thread_id_2 = 80001;
+
+    // Make two events with the same address
+    auto event_a = std::make_unique<TestEvent>(thread_id, addr_a);
+    auto event_b = std::make_unique<TestEvent>(thread_id, addr_a);
+
+    auto event_c = std::make_unique<TestEvent>(thread_id_2, addr_a);
+    auto event_d = std::make_unique<TestEvent>(thread_id_2, addr_a);
+
+    TestEvent* raw_a = event_a.get();
+    TestEvent* raw_b = event_b.get();
+    TestEvent* raw_c = event_c.get();
+    TestEvent* raw_d = event_d.get();
+
+    LogEvent(std::move(event_a));
+    LogEvent(std::move(event_c));
+    LogEvent(std::move(event_b));
+    LogEvent(std::move(event_d));
+
+    ReplayEvent(addr_a, thread_id);
+    ReplayEvent(addr_a, thread_id);
+    ReplayEvent(addr_a, thread_id_2);
+    ReplayEvent(addr_a, thread_id_2);
+
+    auto global_seq = raw_b->global_seq;
+
+    ResetEventReplay(global_seq - 1);
+    REQUIRE(raw_a->replayed);
+    REQUIRE_FALSE(raw_b->replayed);
+    REQUIRE_FALSE(raw_c->replayed);
+    REQUIRE_FALSE(raw_d->replayed);
+}

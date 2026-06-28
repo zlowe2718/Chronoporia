@@ -16,8 +16,6 @@
 namespace {
     std::vector<chronoporia::Event> event_log;
     std::map<DWORD, std::stack<chronoporia::Event>> pending_thread_events;
-
-    uint64_t replayed_global_seq = 0;
     
     // TODO: make this cleaner.  Is it worth using shared_ptr for this?
     // a map of thread id to the index of the pending replay finish.  The index is the index of the event log
@@ -87,8 +85,8 @@ namespace chronoporia {
     }
 
     void ReplayEvent(const uintptr_t rip_address, const DWORD thread_id) {
-        auto it = std::find_if(event_log.begin() + replayed_global_seq, event_log.end(), [rip_address](Event &event) {
-            return event->event_rip == rip_address;
+        auto it = std::find_if(event_log.begin(), event_log.end(), [rip_address, thread_id](Event &event) {
+            return event->event_rip == rip_address && event->thread_id == thread_id && !event->replayed;
         });
 
         if (it == event_log.end()) {
@@ -99,6 +97,7 @@ namespace chronoporia {
         auto idx = it - event_log.begin();
         auto &event = *event_log[idx];
         event.ReplayEvent();
+        event.replayed = true;
 
         if (event.replay_kind == ReplayKind::Execute) {
             pending_replay_end_events[thread_id].push(idx);
@@ -122,4 +121,19 @@ namespace chronoporia {
         RemoveBreakpoint(rip_address, thread_id);
     }
 
+    void ResetEventReplay(uint64_t global_seq) {
+        // Find the first event after the global_seq
+        auto it = std::upper_bound(event_log.begin(), event_log.end(), global_seq,             
+            [](uint64_t seq, const chronoporia::Event& logged_event) {
+                return seq < logged_event->global_seq;
+            }
+        );
+
+        // flip all replayed values to false after the global_seq
+        while (it != event_log.end()) {
+            auto& event = *it;
+            event->replayed = false;
+            ++it;
+        }
+    }
 }

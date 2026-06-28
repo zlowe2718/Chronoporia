@@ -2,6 +2,7 @@
 #include "debugger_transition.h"
 #include "error_transition.h"
 #include "nt_wrappers.h"
+#include "quill/LogMacros.h"
 #include "reconstruction_transition.h"
 #include "record_transition.h"
 #include "thread_utils.h"
@@ -92,7 +93,12 @@ namespace chronoporia {
                 if (last_error == ERROR_SEM_TIMEOUT) {
                     SuspendProcess();
                     // TODO: Fix this later with a better way to transition back to the debugger 
-                    return TransitionToTimeRestore {true, 0, 0, TransitionsBox{Transitions{TransitionToReconstruction {true}}}};
+                    auto target_global_sequence = GetGlobalSequence(0, 0);
+                    if (!target_global_sequence) {
+                        LOG_ERROR(globals::logger, "Could not find snapshot at run_id {} and run_seq {}", 0, 0);
+                    }
+
+                    return TransitionToTimeRestore {true, 0, 0, target_global_sequence.value(),TransitionsBox{Transitions{TransitionToReconstruction {true}}}};
                 } else {
                     LOG_ERROR(globals::logger, "Unknown error encountered from WaitDebugEvent {}", last_error);
                     globals::running = false;

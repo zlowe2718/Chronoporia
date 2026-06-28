@@ -4,6 +4,7 @@
 #include "thread_manager.h"
 #include "execution_tree.h"
 #include "globals.h"
+#include <optional>
 #include <string>
 
 namespace {
@@ -51,5 +52,12 @@ namespace chronoporia {
 
     bool ValidSnapshotIdSeq(uint32_t run_id, uint32_t run_seq) {
         return snapshot_history.ExactNodeExists(run_id, run_seq);
+    }
+
+    std::optional<uint64_t> GetGlobalSequence(uint32_t run_id, uint32_t run_seq) {
+        auto node = snapshot_history.GetExactNode(run_id, run_seq);
+        if (!node) return std::nullopt;
+
+        return node.value()->global_seq;
     }
 }

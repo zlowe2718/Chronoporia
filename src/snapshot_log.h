@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <optional>
 
 namespace chronoporia {
 
@@ -16,4 +17,5 @@ namespace chronoporia {
     void SnapshotProcess(SnapshotType snapshot_type);
     void PrintSnapshotHistory();
     bool ValidSnapshotIdSeq(uint32_t run_id, uint32_t run_seq);
+    std::optional<uint64_t> GetGlobalSequence(uint32_t run_id, uint32_t run_seq);
 }

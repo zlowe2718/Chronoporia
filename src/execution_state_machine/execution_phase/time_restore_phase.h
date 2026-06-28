@@ -18,6 +18,7 @@ namespace chronoporia {
             , process_suspended_ {t.process_suspended}
             , target_run_id_ {t.target_run_id}
             , target_run_sequence_ {t.target_run_sequence}
+            , target_global_sequence_ {t.target_global_sequence}
             , next_transition_ {std::move(t.next_transition)}
         {};
 
@@ -36,6 +37,7 @@ namespace chronoporia {
         bool process_suspended_;
         uint32_t target_run_id_;
         uint32_t target_run_sequence_;
+        uint64_t target_global_sequence_;
         std::future<void> unload_dlls_and_threads_;
         TransitionsBox next_transition_;
     };
