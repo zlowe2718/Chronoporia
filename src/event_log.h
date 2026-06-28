@@ -3,16 +3,10 @@
 #include <cstdint>
 #include <memory>
 
-// TODO: I need a thread map to event stack then on stack pop I add it to the event log?
-//  Probably need some kind of insertion sort then since events will come out of order
-
-// TODO: I need a way to process events as they come in like event type A then I create event A, then on function return I finish event A and pop it from the stack
-
 namespace chronoporia {
     using Event = std::unique_ptr<BaseEvent>;
 
     void LogEvent(Event event);
-    // void ProcessEvent();
 
     void OnBreakpointEnter(const uintptr_t rip_address, const DWORD thread_id);
     void OnBreakpointReturn(const uintptr_t rip_address, const DWORD thread_id, const CONTEXT& ctx);

@@ -26,7 +26,6 @@ namespace chronoporia {
                     const EXCEPTION_RECORD& er = de.u.Exception.ExceptionRecord;
 
                     if (er.ExceptionCode == STATUS_BREAKPOINT) {
-                        // TODO: do an explicit check for the correct windows initial breakpoint
                         // Can only set the child breakpoint once the windows debug breakpoint has been sent
                         // This guarantees all necessary dlls (including child process) for launch have been initialized 
                         if (!process_loaded) {

@@ -16,7 +16,6 @@
 namespace chronoporia {
 
     struct TransitionVisitor {
-
         std::unique_ptr<BaseExecutionPhase> operator()(TransitionToRecording&& t) {
             return std::make_unique<RecordingPhase>(std::move(t));
         }

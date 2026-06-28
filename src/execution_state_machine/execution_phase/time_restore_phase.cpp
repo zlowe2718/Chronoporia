@@ -34,7 +34,6 @@ using namespace std::chrono_literals;
 
 // TODO: Make time restoration a util instead of a phase?  I need to know which phase to move to next
 namespace chronoporia {
-    // TODO: reenable shell code execution.  Order should be dll -> threads -> memory
     // During the dll and thread fixing we'll need to be running WaitForDebugEvent so the process
     // Can proceed with unloading/loading dlls and destroying/creating threads
     void TimeRestorePhase::Enter() {
@@ -72,7 +71,6 @@ namespace chronoporia {
         return std::move(*next_transition_.value);
     }
 
-    // TODO: When loading dlls (calling RestoreDLLsAtSequence) I'll need to eventually need to move that under the async call like threads and probably combine these functions
     bool TimeRestorePhase::RunDllRestore() {
         DEBUG_EVENT de;
         DWORD last_error;

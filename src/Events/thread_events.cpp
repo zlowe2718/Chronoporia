@@ -11,11 +11,6 @@ namespace {
 
 namespace chronoporia {
 
-    // TODO: Need to track all windows calls that use a thread handle?
-    // Issue is that on replay the handle returned will be different so if I make a new thread
-    // and the code normally caches the handle then i'd have to replace every instance where the handle is cached
-    // Or I intercept every windows api that consumes a handle and inject it with the new value?
-    // or is this even an issue?
     void ThreadCreateEvent::FinishEvent(const CONTEXT& thread_ctx) {
         return_status = thread_ctx.Rax;
 

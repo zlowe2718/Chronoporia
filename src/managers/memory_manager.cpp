@@ -86,7 +86,7 @@ namespace chronoporia {
 void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequence) {
     // First Free all private allocations
     MEMORY_BASIC_INFORMATION m;
-    for (char *address = NULL; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
+    for (char *address = nullptr; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
             address = static_cast<char *>(m.BaseAddress) + m.RegionSize)
     {
         if (m.State == MEM_FREE || m.Type == MEM_IMAGE || m.Type == MEM_MAPPED) continue;
@@ -97,8 +97,6 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
         if (std::find(address_blacklist.begin(), address_blacklist.end(), reinterpret_cast<uintptr_t>(m.AllocationBase)) != address_blacklist.end()) continue;
         // TODO: Is this needed? If we free the allocation base this should never trigger? Only act at the allocation base to avoid double-free within the same region
         if (m.BaseAddress != m.AllocationBase) continue;
-        // TODO: no need to free TEB.  Do I need to track this in ThreadInfo
-        // if (restore_snapshot.thread_contexts.count(m.BaseAddress)) continue;
         FreeMemory(m.AllocationBase);
     }
 
@@ -228,7 +226,7 @@ void SnapshotMemory(uint64_t global_sequence, uint32_t run_id, uint32_t run_sequ
     // allocation_base -> set of base_address values seen as their own MBI region this pass.
     std::unordered_map<uintptr_t, std::set<uintptr_t>> live_block_addresses;
 
-    for (void *address = NULL; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
+    for (void *address = nullptr; VirtualQueryEx(globals::process_handle, address, &m, sizeof(m)) == sizeof(m);
         address = static_cast<char *>(m.BaseAddress) + m.RegionSize)
     {
         // No need to track Free blocks

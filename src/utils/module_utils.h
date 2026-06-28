@@ -7,6 +7,4 @@ namespace chronoporia {
 
     std::wstring GetDllNameFromLp(LPVOID lpImageName);
     std::wstring GetDllNameFromHandle(HANDLE dll_handle);
-
-    DWORD GetDllRefcount(HMODULE dll);
 }

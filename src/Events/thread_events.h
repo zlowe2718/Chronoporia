@@ -4,8 +4,6 @@
 #include "nt_undocumented.h"
 #include "base_event.h"
 
-// TODO: May need to handle NtThreadCreate later for earlier windows versions
-
 namespace chronoporia {
     struct ThreadCreateStackArgs {
         IN PUSER_THREAD_START_ROUTINE start_routine;

@@ -3,7 +3,6 @@
 #include <Windows.h>
 #include <winternl.h>
 
-// TODO: update this file for other windows versions
 namespace chronoporia {
 
 #define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS) 0xC0000004L)

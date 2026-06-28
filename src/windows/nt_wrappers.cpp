@@ -54,40 +54,31 @@ LONG ResumeProcess() {
 }
 
 LONG QueryInformationProcess(const PROCESSINFOCLASS process_info_class, const PROCESS_BASIC_INFORMATION& pbi) {
-    LONG error = NtQueryInformationProcess(globals::process_handle, process_info_class, const_cast<void *>(static_cast<const void *>(&pbi)), sizeof(pbi), NULL);
+    LONG error = NtQueryInformationProcess(globals::process_handle, process_info_class, const_cast<void *>(static_cast<const void *>(&pbi)), sizeof(pbi), nullptr);
     if (error) {
         LOG_WARNING(globals::logger,"NtQueryInformation Process Failed with error code: {}", GetLastError());
     };
     return error;
 }
 
-LONG UnmapViewOfSection() {
-    return 0;
-}
-
 uintptr_t GetChildEntryAddress() {
-    // 3. Get PEB address from ProcessBasicInformation
     PROCESS_BASIC_INFORMATION pbi;
-    ULONG retLen;
-    NtQueryInformationProcess(globals::process_handle, ProcessBasicInformation, &pbi, sizeof(pbi), &retLen);
+    NtQueryInformationProcess(globals::process_handle, ProcessBasicInformation, &pbi, sizeof(pbi), nullptr);
 
-    // 4. Read ImageBaseAddress from PEB (offset varies by architecture, usually Reserved3[1])
     PEB peb;
-    ReadProcessMemory(globals::process_handle, pbi.PebBaseAddress, &peb, sizeof(peb), NULL);
-    // TODO: Update the PEB to be fully typed per windows version
-    PVOID imageBase = peb.Reserved3[1]; 
+    ReadProcessMemory(globals::process_handle, pbi.PebBaseAddress, &peb, sizeof(peb), nullptr);
+    PVOID image_base = peb.Reserved3[1]; 
 
-    // 5. Read PE Headers
-    IMAGE_DOS_HEADER dosHeader;
-    IMAGE_NT_HEADERS ntHeaders;
+    IMAGE_DOS_HEADER dos_header;
+    IMAGE_NT_HEADERS nt_headers;
     
-    ReadProcessMemory(globals::process_handle, imageBase, &dosHeader, sizeof(dosHeader), NULL);
+    ReadProcessMemory(globals::process_handle, image_base, &dos_header, sizeof(dos_header), nullptr);
 
-    LPCVOID nt_header_addr = reinterpret_cast<LPCVOID>(reinterpret_cast<uintptr_t>(imageBase) + dosHeader.e_lfanew);
-    ReadProcessMemory(globals::process_handle, nt_header_addr, &ntHeaders, sizeof(ntHeaders), NULL);
+    LPCVOID nt_header_addr = reinterpret_cast<LPCVOID>(reinterpret_cast<uintptr_t>(image_base) + dos_header.e_lfanew);
+    ReadProcessMemory(globals::process_handle, nt_header_addr, &nt_headers, sizeof(nt_headers), nullptr);
 
-    // 6. Calculate Entry Point: Base + AddressOfEntryPoint
-    return reinterpret_cast<uintptr_t>(imageBase) + ntHeaders.OptionalHeader.AddressOfEntryPoint;
+    // entry point = image base + AddressOfEntryPoint
+    return reinterpret_cast<uintptr_t>(image_base) + nt_headers.OptionalHeader.AddressOfEntryPoint;
 }
 
 }
