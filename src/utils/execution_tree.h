@@ -177,7 +177,7 @@ namespace chronoporia {
         template <typename Formatter>
         void PrintNode(ExecutionNode* node, Formatter& formatter, int depth) const {
             std::string indent(static_cast<size_t>(depth) * 2, ' ');
-            std::printf("%s%s\n", indent.c_str(), formatter(node->state, node->run_id, node->run_seq, node->global_seq).c_str());
+            printf("%s%s\n", indent.c_str(), formatter(node->state, node->run_id, node->run_seq, node->global_seq).c_str());
 
             for (const auto& [run_id, children] : node->branch_children) {
                 for (const auto& child : children) {

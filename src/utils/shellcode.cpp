@@ -1,6 +1,7 @@
 #include "shellcode.h"
 #include "globals.h"
 #include "nt_wrappers.h"
+#include "quill/LogMacros.h"
 #include <cstdint>
 #include <libloaderapi.h>
 #include <vector>
@@ -32,9 +33,9 @@ namespace chronoporia {
 
         if (!VirtualFreeEx(globals::process_handle, reinterpret_cast<void *>(shell_address), 0, MEM_RELEASE))
         {
-            printf("VirtualFreeEx failed:\n"
-                "    error:    %ld\n"
-                "    address:  %p\n", GetLastError(), shell_address);
+            LOG_WARNING(globals::logger, "VirtualFreeEx (shellcode) failed:\n"
+                "    error:    {}\n"
+                "    address:  {:p}", GetLastError(), shell_address);
         }
         FlushInstructionCache(globals::process_handle, reinterpret_cast<void *>(shell_address), mbi.RegionSize);    
     }

@@ -92,6 +92,8 @@ namespace chronoporia {
     Transitions DebuggerPhase::Run() {
         while (globals::running) {
             if (process_suspended_) {
+                // flush before user input so we have a clean line
+                globals::logger->flush_log();
                 std::string input = UserInput("chronoporia> ");
 
                 auto token = Tokenize(input);

@@ -1,4 +1,6 @@
 #include "thread_utils.h"
+#include "globals.h"
+#include "quill/LogMacros.h"
 #include <map>
 
 namespace {
@@ -70,16 +72,16 @@ namespace chronoporia {
     void ReplaceThreadContext(const DWORD thread_id, const CONTEXT& ctx) {
         HANDLE thread_handle = GetThreadHandle(thread_id);
         if (!SetThreadContext(thread_handle, &ctx)) {
-            printf("Thread error: %ld\n"
-                   "    Thread handle: %p\n"
-                   "    Thread id: %ld", GetLastError(), thread_handle, thread_id);
+            LOG_WARNING(globals::logger, "Thread error: {}\n"
+                   "    Thread handle: {:p}\n"
+                   "    Thread id: {}", GetLastError(), thread_handle, thread_id);
         }
     }
 
     void SuspendAllThreads() {
         for (const auto [thread_id, thread_handle]: thread_id_to_handle) {
             if(SuspendThread(thread_handle) == static_cast<DWORD>(-1)) {
-                printf("Suspending thread %ld failed with error %ld\n", thread_id, GetLastError());
+                LOG_WARNING(globals::logger, "Suspending thread {} failed with error {}", thread_id, GetLastError());
             }
         }        
     }
@@ -88,7 +90,7 @@ namespace chronoporia {
         for (const auto [thread_id, thread_handle]: thread_id_to_handle) {
             if (thread_id != current_thread_id) {
                 if(SuspendThread(thread_handle) == static_cast<DWORD>(-1)) {
-                    printf("Suspending thread %ld failed with error %ld\n", thread_id, GetLastError());
+                    LOG_WARNING(globals::logger,"Suspending thread {} failed with error {}", thread_id, GetLastError());
                 }
             }
         }
@@ -101,14 +103,14 @@ namespace chronoporia {
     void ResumeAllThreads() {
         for (const auto [thread_id, thread_handle]: thread_id_to_handle) {
             if(ResumeThread(thread_handle) == static_cast<DWORD>(-1)) {
-                printf("Resuming thread %ld failed with error %ld\n", thread_id, GetLastError());
+                LOG_WARNING(globals::logger,"Resuming thread {} failed with error {}", thread_id, GetLastError());
             }
         }        
     }
 
     void ResumeThreadId(DWORD thread_id) {
         if(ResumeThread(thread_id_to_handle[thread_id]) == static_cast<DWORD>(-1)) {
-            printf("Resuming thread %ld failed with error %ld\n", thread_id, GetLastError());
+            LOG_WARNING(globals::logger,"Resuming thread {} failed with error {}", thread_id, GetLastError());
         }
     }
 

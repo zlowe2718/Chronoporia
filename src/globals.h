@@ -1,4 +1,5 @@
 #pragma once
+#include "quill/Logger.h"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <stdint.h>
@@ -17,4 +18,5 @@ namespace globals {
     extern uint32_t run_sequence;
     extern std::map<DWORD, uint64_t> thread_id_to_sequence;
     extern DWORD main_thread_id;
+    extern quill::Logger* logger;
 }

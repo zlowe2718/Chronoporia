@@ -1,4 +1,6 @@
 #include "thread_events.h"
+#include "globals.h"
+#include "quill/LogMacros.h"
 #include "thread_manager.h"
 #include <map>
 #include <print>
@@ -30,11 +32,11 @@ namespace chronoporia {
 
     // TODO: need to track thread here so we can correctly pull the current thread state from the execution tree
     void ThreadCreateEvent::ReplayEvent() {
-        std::print("\nThread Create Event Replay called\n");
+        LOG_DEBUG(globals::logger,"Thread Create Event Replay called");
     }
 
     void ThreadCreateEvent::ReplayEventEnd() {
-        std::print("\nThread Create Event Replay End called\n");
+        LOG_DEBUG(globals::logger,"Thread Create Event Replay End called");
     }
 
     void ThreadDestroyEvent::FinishEvent(const CONTEXT& thread_ctx) {

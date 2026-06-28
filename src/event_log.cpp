@@ -2,6 +2,7 @@
 #include "Events/base_event.h"
 #include "Events/shared_library_events.h"
 #include "nt_wrappers.h"
+#include "quill/LogMacros.h"
 #include "trampoline.h"
 #include "breakpoint_manager.h"
 #include "thread_events.h"
@@ -88,7 +89,7 @@ namespace chronoporia {
         });
 
         if (it == event_log.end()) {
-            std::print("Could not find event at address {}", rip_address);
+            LOG_WARNING(globals::logger, "Could not find event at address {}", rip_address);
             return;
         }
 

@@ -1,4 +1,5 @@
 #include "shared_library_events.h"
+#include "quill/LogMacros.h"
 #include <print>
 
 namespace chronoporia {
@@ -11,11 +12,11 @@ namespace chronoporia {
     }
 
     void SharedLibraryLoadEvent::ReplayEvent() {
-        std::print("\nSharedLibraryLoad Event Replay called\n");
+        LOG_DEBUG(globals::logger, "SharedLibraryLoad Event Replay called");
     }
 
     void SharedLibraryLoadEvent::ReplayEventEnd() {
-        std::print("\nSharedLibraryLoad Event Replay End called\n");
+        LOG_DEBUG(globals::logger,"SharedLibraryLoad Event Replay End called");
     }
 
     void SharedLibraryUnloadEvent::FinishEvent(const CONTEXT& thread_ctx) {
@@ -25,11 +26,11 @@ namespace chronoporia {
     }
 
     void SharedLibraryUnloadEvent::ReplayEvent() {
-        std::print("\nSharedLibraryUnload Event Replay called\n");
+        LOG_DEBUG(globals::logger,"SharedLibraryUnload Event Replay called");
     }
 
     void SharedLibraryUnloadEvent::ReplayEventEnd() {
-        std::print("\nSharedLibraryUnload Event Replay End called\n");
+        LOG_DEBUG(globals::logger,"SharedLibraryUnload Event Replay End called");
     }
 
 }

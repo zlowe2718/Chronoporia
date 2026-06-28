@@ -40,6 +40,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(zydis)
 
+# ---- Quill (logging) ----
+FetchContent_Declare(
+  quill
+  GIT_REPOSITORY https://github.com/odygrd/quill.git
+  GIT_TAG v12.0.0
+)
+FetchContent_MakeAvailable(quill)
+
 # ---- Catch2 (unit_tests) ----
 if(CHRONOPORIA_TESTS)
   FetchContent_Declare(
@@ -71,6 +79,7 @@ function(chronoporia_add_unload_dll_obj out_var)
 endfunction()
 
 set(CHRONOPORIA_SOURCES
+  src/resources.rc
   src/Events/shared_library_events.cpp
   src/Events/thread_events.cpp
   src/event_log.cpp
@@ -115,11 +124,13 @@ target_include_directories(chronoporia PRIVATE
 
 target_compile_definitions(chronoporia PRIVATE
   ZYDIS_STATIC_BUILD
+  NOMINMAX
   ${CHRONOPORIA_UNICODE_DEFINITIONS}
-  $<$<BOOL:${CHRONOPORIA_MEMORY_DEBUG}>:MEMORY_DEBUG>
+  $<$<CONFIG:Release>:QUILL_COMPILE_ACTIVE_LOG_LEVEL=QUILL_LOG_LEVEL_INFO>
+  $<$<CONFIG:Debug>:QUILL_COMPILE_ACTIVE_LOG_LEVEL=QUILL_LOG_LEVEL_DEBUG>
 )
 
-target_link_libraries(chronoporia PRIVATE Zydis ntdll)
+target_link_libraries(chronoporia PRIVATE Zydis quill::quill ntdll)
 
 set_target_properties(chronoporia PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
@@ -128,7 +139,7 @@ add_custom_command(TARGET chronoporia POST_BUILD
           "$<TARGET_FILE:chronoporia>" "${CMAKE_SOURCE_DIR}/test_scripts/python/"
 )
 
-add_subdirectory(plugins)
+# add_subdirectory(plugins)
 add_subdirectory(tests)
 
 if(CHRONOPORIA_TESTS)

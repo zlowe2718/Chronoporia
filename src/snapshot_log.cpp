@@ -1,5 +1,6 @@
 #include "snapshot_log.h"
 #include "memory_manager.h"
+#include "quill/LogMacros.h"
 #include "thread_manager.h"
 #include "execution_tree.h"
 #include "globals.h"
@@ -29,7 +30,7 @@ namespace chronoporia {
     }
 
     void SnapshotProcess(SnapshotType snapshot_type) {
-        std::printf("\n --- Taking %s ---\n", to_string(snapshot_type).c_str());
+        LOG_INFO(globals::logger, "--- Taking {} ---", to_string(snapshot_type));
 
         Snapshot new_snapshot {snapshot_type, globals::run_id, globals::run_sequence, globals::global_sequence};
 

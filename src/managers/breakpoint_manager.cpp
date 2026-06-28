@@ -1,5 +1,6 @@
 #include "breakpoint_manager.h"
 #include "globals.h"
+#include "quill/LogMacros.h"
 #include "trampoline.h"
 #include <cstdint>
 #include <unordered_map>
@@ -91,7 +92,7 @@ void WriteBreakpoint(uintptr_t address, BreakpointType bp_type) {
 
 bool RestoreMemory(const Breakpoint& bp) {
     if (!WriteProcessMemory(globals::process_handle, reinterpret_cast<void *>(bp.address), &bp.savedByte, 1, nullptr)) {
-        printf("writing original byte failed at address %p with error %ld\n", bp.address, GetLastError());
+        LOG_WARNING(globals::logger, "writing original byte failed at address {:p} with error {}", bp.address, GetLastError());
         return false;
     }
     // Flush instruction cache so CPU sees the new byte

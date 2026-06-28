@@ -1,5 +1,6 @@
 #include "nt_wrappers.h"
 #include "globals.h"
+#include "quill/LogMacros.h"
 #include <stdio.h>
 
 namespace chronoporia {
@@ -39,7 +40,7 @@ void InitializeWrapperAddresses() {
 LONG SuspendProcess() {
     LONG error = NtSuspendProcess(globals::process_handle);
     if (error) {
-        printf("\n\nSuspend Process Failed with error code: %ld\n\n", GetLastError());
+        LOG_WARNING(globals::logger,"Suspend Process Failed with error code: {}", GetLastError());
     }
     return error;
 }
@@ -47,7 +48,7 @@ LONG SuspendProcess() {
 LONG ResumeProcess() {
     LONG error = NtResumeProcess(globals::process_handle);
     if (error) {
-        printf("\n\nResume Process Failed with error code: %ld\n\n", GetLastError());
+        LOG_WARNING(globals::logger,"Resume Process Failed with error code: {}", GetLastError());
     }
     return error;
 }
@@ -55,7 +56,7 @@ LONG ResumeProcess() {
 LONG QueryInformationProcess(const PROCESSINFOCLASS process_info_class, const PROCESS_BASIC_INFORMATION& pbi) {
     LONG error = NtQueryInformationProcess(globals::process_handle, process_info_class, const_cast<void *>(static_cast<const void *>(&pbi)), sizeof(pbi), NULL);
     if (error) {
-        printf("\n\nNtQueryInformation Process Failed with error code: %ld\n\n", GetLastError());
+        LOG_WARNING(globals::logger,"NtQueryInformation Process Failed with error code: {}", GetLastError());
     };
     return error;
 }

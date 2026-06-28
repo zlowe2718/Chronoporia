@@ -1,6 +1,8 @@
 #include "module_manager.h"
 #include "globals.h"
 #include "execution_tree.h"
+#include "quill/LogMacros.h"
+#include "quill/std/WideString.h"
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
@@ -41,7 +43,7 @@ namespace chronoporia {
         if (process_module_history.contains(dll_handle)) {
             process_module_history.at(dll_handle).AddChild(std::move(new_info), run_id, run_seq, global_seq);
         } else {
-            printf("Untracking dll %ls before tracking", dll_name.c_str());
+            LOG_WARNING(globals::logger, "Untracking dll {} before tracking", dll_name);
         }        
     }
 

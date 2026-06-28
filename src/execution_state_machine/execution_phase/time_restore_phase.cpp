@@ -1,5 +1,6 @@
 #include "time_restore_phase.h"
 #include "error_transition.h"
+#include "quill/LogMacros.h"
 #include "reconstruction_transition.h"
 #include "shellcode.h"
 #include "breakpoint_manager.h"
@@ -86,10 +87,10 @@ namespace chronoporia {
 
                 switch (de.dwDebugEventCode) {
                     case LOAD_DLL_DEBUG_EVENT:
-                        printf("dll loaded\n");
+                        LOG_DEBUG(globals::logger, "dll loaded");
                         break;
                     case UNLOAD_DLL_DEBUG_EVENT:
-                        printf("dll unloaded\n");
+                        LOG_DEBUG(globals::logger, "dll unloaded");
                         break;
                     case EXCEPTION_DEBUG_EVENT:
                         const EXCEPTION_RECORD& er = de.u.Exception.ExceptionRecord;
@@ -138,7 +139,7 @@ namespace chronoporia {
             } else {
                 last_error = GetLastError();
 
-                printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
+                LOG_ERROR(globals::logger, "Unknown error encountered from WaitDebugEvent {}", last_error);
                 globals::running = false;
                 return false;
             }                
@@ -206,7 +207,7 @@ namespace chronoporia {
                     // check if dlls and threads have been unloaded
                     status = unload_dlls_and_threads_.wait_for(0ms);
                 } else {
-                    printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
+                    LOG_ERROR(globals::logger, "Unknown error encountered from WaitDebugEvent {}", last_error);
                     globals::running = false;
                     return false;
                 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "quill/LogMacros.h"
 #include <cstdint>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -50,8 +51,8 @@ namespace chronoporia {
 
             SIZE_T bytes_read;
             if (!ReadProcessMemory(globals::process_handle, reinterpret_cast<void *>(stack_address), buffer.data(), total_read_size, &bytes_read)) {
-                printf("Read Process Memory failed at address %p\n"
-                        " error: %ld, bytes_read: %lld\n", stack_address, GetLastError(), bytes_read);
+                LOG_WARNING(globals::logger, "Read Process Memory failed at address {:p}\n"
+                            " error: {}, bytes_read: {}", stack_address, GetLastError(), bytes_read);
             }
 
             // Doing a memcpy once so I don't do a memcpy or ReadProcessMemory for each stack arg

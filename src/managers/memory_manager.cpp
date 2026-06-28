@@ -1,6 +1,7 @@
 #include "memory_manager.h"
 #include "fully_persistent_array.h"
 #include "globals.h"
+#include "quill/LogMacros.h"
 #include <basetsd.h>
 #include <cstdint>
 #include <algorithm>
@@ -58,9 +59,9 @@ namespace {
     void inline FreeMemory(void *allocation_base) {
         if (!VirtualFreeEx(globals::process_handle, allocation_base, 0, MEM_RELEASE))
         {
-            printf("VirtualFreeEx failed:\n"
-                "    error:    %ld\n"
-                "    address:  %p\n", GetLastError(), allocation_base);
+            LOG_DEBUG(globals::logger, "VirtualFreeEx failed:\n"
+                "    error:    {}\n"
+                "    address:  {:p}", GetLastError(), allocation_base);
         }
     }
 
@@ -70,10 +71,10 @@ namespace {
     void inline LogCurrentOccupant(void *address) {
         MEMORY_BASIC_INFORMATION occupant {};
         if (VirtualQueryEx(globals::process_handle, address, &occupant, sizeof(occupant)) != sizeof(occupant)) {
-            printf("    occupant: <VirtualQueryEx failed, error %ld>\n", GetLastError());
+            LOG_DEBUG(globals::logger,"    occupant: <VirtualQueryEx failed, error {}>", GetLastError());
             return;
         }
-        printf("    occupant: base=%p alloc_base=%p region_size=%llu state=0x%lx protect=0x%lx alloc_protect=0x%lx type=0x%lx\n",
+        LOG_DEBUG(globals::logger,"    occupant: base={:p} alloc_base={:p} region_size={} state=0x{:x} protect=0x{:x} alloc_protect=0x{:x} type=0x{:x}",
             occupant.BaseAddress, occupant.AllocationBase, (unsigned long long)occupant.RegionSize,
             occupant.State, occupant.Protect, occupant.AllocationProtect, occupant.Type);
     }
@@ -106,10 +107,6 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
         // target_run_sequence), or the most recent event is freed - either way, skip.
         std::optional<MemoryEventType> event = region_history.events.try_get(target_run_id, target_run_sequence);
         if (!event || *event == MemoryEventType::FREED) {
-            printf("Skipping allocation - %s at (run_id=%u, run_seq=%u):\n"
-                "    allocation_base: %p\n",
-                !event ? "no CREATED event recorded" : "most recent event is FREED",
-                target_run_id, target_run_sequence, reinterpret_cast<void *>(allocation_base));
             continue;
         }
 
@@ -128,7 +125,7 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
                 region_history.allocation_protect
             ))
             {
-                printf("VirtualAllocEx (MEM_RESERVE) failed:\n"
+                LOG_DEBUG(globals::logger,"VirtualAllocEx (MEM_RESERVE) failed:\n"
                     "    error:    %ld\n"
                     "    address:  %p\n"
                     "    size:     %lld\n", GetLastError(), reinterpret_cast<void *>(allocation_base), region_size_at_target);
@@ -154,10 +151,6 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
             // skip, there's nothing to restore it to.
             std::optional<MBIHistory> mbi_opt = block_history.mbi_history.try_get(target_run_id, target_run_sequence);
             if (!mbi_opt) {
-                printf("Skipping block - no MBIHistory at (run_id=%u, run_seq=%u):\n"
-                    "    allocation_base: %p\n"
-                    "    block_address:   %p\n", target_run_id, target_run_sequence,
-                    reinterpret_cast<void *>(allocation_base), reinterpret_cast<void *>(block_history.base_address));
                 continue;
             }
             MBIHistory mbi = *mbi_opt;
@@ -180,20 +173,20 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
                 {
                     if (!VirtualAllocEx(globals::process_handle, base_address_ptr, block_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE))
                     {
-                        printf("VirtualAllocEx (MEM_COMMIT) failed:\n"
-                            "    error:    %ld\n"
-                            "    address:  %p\n"
-                            "    size:     %lld\n", GetLastError(), base_address_ptr, block_size);
+                        LOG_DEBUG(globals::logger,"VirtualAllocEx (MEM_COMMIT) failed:\n"
+                            "    error:    {}\n"
+                            "    address:  {:p}\n"
+                            "    size:     {}", GetLastError(), base_address_ptr, block_size);
                         LogCurrentOccupant(base_address_ptr);
                     }
                 } else if (mbi.protect & PAGE_GUARD) {
                     // This is the Thread Stack memory blocks
                     if (!VirtualProtectEx(globals::process_handle, base_address_ptr, block_size, mbi.protect & ~PAGE_GUARD, &old_protect))
                     {
-                        printf("VirtualProtectEx (TEB) failed:\n"
-                            "    error:    %ld\n"
-                            "    address:  %p\n"
-                            "    size:     %lld\n", GetLastError(), base_address_ptr, block_size);
+                        LOG_DEBUG(globals::logger,"VirtualProtectEx (TEB) failed:\n"
+                            "    error:    {}\n"
+                            "    address:  {:p}\n"
+                            "    size:     {}", GetLastError(), base_address_ptr, block_size);
                         LogCurrentOccupant(base_address_ptr);
                     }
                 } else if (mbi.type == MEM_IMAGE) {
@@ -201,27 +194,27 @@ void RestoreMemoryAtSequence(uint32_t target_run_id, uint32_t target_run_sequenc
                     // This can also be mapped files
                     if (!VirtualProtectEx(globals::process_handle, base_address_ptr, block_size, PAGE_EXECUTE_WRITECOPY, &old_protect))
                     {
-                        printf("VirtualProtectEx (IMAGE) failed:\n"
-                            "    error:    %ld\n"
-                            "    address:  %p\n"
-                            "    size:     %lld\n", GetLastError(), base_address_ptr, block_size);
+                        LOG_DEBUG(globals::logger,"VirtualProtectEx (IMAGE) failed:\n"
+                            "    error:    {}\n"
+                            "    address:  {:p}\n"
+                            "    size:     {}", GetLastError(), base_address_ptr, block_size);
                         LogCurrentOccupant(base_address_ptr);
                     }
                 }
                 if (!WriteProcessMemory(globals::process_handle, base_address_ptr, rebuilt_block.data(), block_size, &bytes_written))
                 {
-                    printf("WriteProcessMemory failed:\n"
-                        "    error:    %ld\n"
-                        "    address:  %p\n"
-                        "    size:     %lld\n", GetLastError(), base_address_ptr, block_size);
+                    LOG_DEBUG(globals::logger,"WriteProcessMemory failed:\n"
+                        "    error:    {}\n"
+                        "    address:  {:p}\n"
+                        "    size:     {}", GetLastError(), base_address_ptr, block_size);
                     LogCurrentOccupant(base_address_ptr);
                 }
                 if (!VirtualProtectEx(globals::process_handle, base_address_ptr, block_size, mbi.protect, &old_protect))
                 {
-                    printf("VirtualProtectEx failed:\n"
-                        "    error:    %ld\n"
-                        "    address:  %p\n"
-                        "    size:     %lld\n", GetLastError(), base_address_ptr, block_size);
+                    LOG_DEBUG(globals::logger,"VirtualProtectEx failed:\n"
+                        "    error:    {}\n"
+                        "    address:  {:p}\n"
+                        "    size:     {}", GetLastError(), base_address_ptr, block_size);
                     LogCurrentOccupant(base_address_ptr);
                 }
             }        

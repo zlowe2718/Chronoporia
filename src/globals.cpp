@@ -14,4 +14,5 @@ namespace globals {
     uint32_t run_sequence {0};
     std::map<DWORD, uint64_t> thread_id_to_sequence {};
     DWORD main_thread_id {0};
+    quill::Logger* logger {nullptr};
 }

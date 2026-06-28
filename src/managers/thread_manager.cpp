@@ -1,4 +1,5 @@
 #include "thread_manager.h"
+#include "quill/LogMacros.h"
 #include "thread_utils.h"
 #include "execution_tree.h"
 #include "globals.h"
@@ -52,7 +53,7 @@ namespace chronoporia {
             ThreadInfo thread_info {thread_id, CONTEXT{}, false};
             process_thread_history.at(thread_id).AddChild(std::move(thread_info), run_id, run_seq, global_seq);
         } else {
-            printf("Untracking thread %lu before tracking", thread_id);
+            LOG_WARNING(globals::logger, "Untracking thread {} before tracking", thread_id);
         }
     }
 
@@ -134,9 +135,9 @@ namespace chronoporia {
             HANDLE thread = GetThreadHandle(thread_id);
             std::optional<CONTEXT> ctx = GetThreadContext(thread);
             if (!ctx) {
-                printf("SnapshotThreads: GetThreadContext failed, not recording a snapshot for this thread:\n"
-                    "    error:     %ld\n"
-                    "    thread_id: %lu\n", GetLastError(), thread_id);
+                LOG_WARNING(globals::logger, "SnapshotThreads: GetThreadContext failed, not recording a snapshot for this thread:\n"
+                    "    error:     {}\n"
+                    "    thread_id: {}", GetLastError(), thread_id);
                 continue;
             }
             ThreadInfo thread_info {thread_id, *ctx, true};

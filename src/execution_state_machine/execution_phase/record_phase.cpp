@@ -75,7 +75,7 @@ namespace chronoporia {
                     case EXIT_PROCESS_DEBUG_EVENT:
                         globals::running = false;
                         continue_status = DBG_EXCEPTION_NOT_HANDLED;
-                        printf("Process exiting with error code %lx\n", de.u.ExitProcess.dwExitCode);
+                        LOG_ERROR(globals::logger, "Process exiting with error code {:x}", de.u.ExitProcess.dwExitCode);
                         break;
                 }
 
@@ -95,7 +95,7 @@ namespace chronoporia {
                     // TODO: Fix this later with a better way to transition back to the debugger 
                     return TransitionToTimeRestore {true, 0, 0, TransitionsBox{Transitions{TransitionToReconstruction {true}}}};
                 } else {
-                    printf("Unknown error encountered from WaitDebugEvent %ld\n", last_error);
+                    LOG_ERROR(globals::logger, "Unknown error encountered from WaitDebugEvent {}", last_error);
                     globals::running = false;
                     return TransitionToError {false, last_error};
                 }
